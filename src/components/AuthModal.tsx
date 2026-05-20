@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../context/StoreContext'
 import { Icon } from './Icons'
+import { isFirebaseEnabled } from '../lib/firebase'
 
 const GoogleG = () => (
   <svg width="16" height="16" viewBox="0 0 24 24">
@@ -38,11 +39,25 @@ export function AuthModal() {
             : "Free to start. Your preferences and meal plans get saved to the cloud."}
         </p>
 
+        {!isFirebaseEnabled && (
+          <div className="info-card mt-4" style={{ fontSize: 13 }}>
+            Firebase is not configured — sign-in is unavailable in this build.
+            See <strong>.env.local.example</strong> for setup instructions.
+          </div>
+        )}
+
         <div className="col gap-2 mt-6">
-          <button className="btn btn-ghost" style={{ justifyContent: 'center', width: '100%', padding: '12px' }}>
+          <button
+            className="btn btn-ghost"
+            style={{ justifyContent: 'center', width: '100%', padding: '12px' }}
+            disabled={!isFirebaseEnabled}
+            onClick={signIn}>
             <GoogleG /> Continue with Google
           </button>
-          <button className="btn btn-ghost" style={{ justifyContent: 'center', width: '100%', padding: '12px' }}>
+          <button
+            className="btn btn-ghost"
+            style={{ justifyContent: 'center', width: '100%', padding: '12px' }}
+            disabled>
             <AppleLogo /> Continue with Apple
           </button>
         </div>
@@ -60,8 +75,11 @@ export function AuthModal() {
           </div>
         </div>
 
-        <button className="btn btn-accent mt-4" style={{ width: '100%', justifyContent: 'center', padding: '12px' }} onClick={signIn}>
-          {mode === 'signin' ? 'Sign in' : 'Create my account'} <Icon.Arrow />
+        <button
+          className="btn btn-accent mt-4"
+          style={{ width: '100%', justifyContent: 'center', padding: '12px' }}
+          disabled>
+          {mode === 'signin' ? 'Sign in with email' : 'Create my account'} <Icon.Arrow />
         </button>
 
         <div className="muted mt-6" style={{ fontSize: 13, textAlign: 'center' }}>
