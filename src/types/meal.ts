@@ -64,6 +64,7 @@ export interface DayMeta {
 export interface RecipeIngredient {
   name: string
   amt: string  // free-form: "9 oz", "1 medium", "½ green"
+  category?: 'Produce' | 'Dairy & Protein' | 'Grains & Bread' | 'Spices & Oils' | 'Pantry' | 'Other'
 }
 
 export interface Recipe {

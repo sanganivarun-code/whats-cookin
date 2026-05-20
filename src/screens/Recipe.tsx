@@ -30,6 +30,18 @@ export function Recipe({ go }: RecipeProps) {
     })
   })
 
+  const CATEGORY_ORDER = ['Produce', 'Dairy & Protein', 'Grains & Bread', 'Spices & Oils', 'Pantry', 'Other'] as const
+
+  const grouped = r.ingredients.reduce<Record<string, { idx: number; ing: typeof r.ingredients[number] }[]>>(
+    (acc, ing, idx) => {
+      const cat = ing.category ?? 'Other'
+      if (!acc[cat]) acc[cat] = []
+      acc[cat].push({ idx, ing })
+      return acc
+    },
+    {}
+  )
+
   const ratio = servings / r.servings
   const n = r.nutrition
   const denom = n.p * 4 + n.c * 4 + n.fat * 9
@@ -179,18 +191,25 @@ export function Recipe({ go }: RecipeProps) {
               </div>
             )}
             <div>
-              {r.ingredients.map((ing, i) => {
-                const sub = ingredientSub[i]
-                return (
-                  <div className="ingredient-row" key={i}>
-                    <span>
-                      {ing.name}
-                      {sub && <span className="renamed-note">({sub.replacement.toLowerCase()})</span>}
-                    </span>
-                    <span className="amt">{scaleAmt(ing.amt, ratio)}</span>
+              {CATEGORY_ORDER.filter((cat) => grouped[cat]?.length).map((cat) => (
+                <div key={cat}>
+                  <div style={{ fontSize: 10, fontFamily: 'var(--mono)', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--ink-soft)', padding: '10px 0 4px' }}>
+                    {cat}
                   </div>
-                )
-              })}
+                  {grouped[cat].map(({ idx, ing }) => {
+                    const sub = ingredientSub[idx]
+                    return (
+                      <div className="ingredient-row" key={idx}>
+                        <span>
+                          {ing.name}
+                          {sub && <span className="renamed-note">({sub.replacement.toLowerCase()})</span>}
+                        </span>
+                        <span className="amt">{scaleAmt(ing.amt, ratio)}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
             </div>
           </div>
 
