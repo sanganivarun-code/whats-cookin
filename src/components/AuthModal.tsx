@@ -12,11 +12,6 @@ const GoogleG = () => (
   </svg>
 )
 
-const AppleLogo = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-    <path d="M17.05 12.04c0-2.94 2.41-4.36 2.52-4.42-1.38-2.01-3.52-2.29-4.28-2.32-1.82-.19-3.55 1.07-4.47 1.07-.93 0-2.34-1.05-3.86-1.02-1.98.03-3.82 1.15-4.84 2.93-2.07 3.58-.53 8.86 1.49 11.77.99 1.42 2.16 3.02 3.7 2.96 1.49-.06 2.05-.96 3.85-.96 1.79 0 2.31.96 3.88.93 1.6-.03 2.62-1.45 3.6-2.87 1.13-1.65 1.6-3.25 1.63-3.33-.04-.02-3.13-1.2-3.16-4.74zM14.6 4.05c.82-1 1.38-2.39 1.23-3.78-1.18.05-2.62.79-3.47 1.79-.76.88-1.43 2.29-1.25 3.65 1.32.1 2.66-.67 3.49-1.66z"/>
-  </svg>
-)
 
 export function AuthModal() {
   const { authOpen, setAuthOpen, signIn, user } = useStore()
@@ -53,12 +48,6 @@ export function AuthModal() {
             disabled={!isFirebaseEnabled}
             onClick={signIn}>
             <GoogleG /> Continue with Google
-          </button>
-          <button
-            className="btn btn-ghost"
-            style={{ justifyContent: 'center', width: '100%', padding: '12px' }}
-            disabled>
-            <AppleLogo /> Continue with Apple
           </button>
         </div>
 
