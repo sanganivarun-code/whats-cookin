@@ -17,7 +17,8 @@ const NAV_LINKS: { id: AppRoute; label: string; icon: React.ReactNode }[] = [
 ]
 
 export function TopNav({ route, go }: TopNavProps) {
-  const { signedIn, authLoading, signOut, user, setAuthOpen, favorites } = useStore()
+  const { signedIn, authLoading, signOut, user, setAuthOpen, favorites, generatedPlan } = useStore()
+  const hasExistingPlan = !authLoading && signedIn && generatedPlan !== null
   const [userMenu, setUserMenu] = useState(false)
 
   const showOnApp = route !== 'landing' && route !== 'onboarding'
@@ -51,8 +52,8 @@ export function TopNav({ route, go }: TopNavProps) {
             {!authLoading && !signedIn && (
               <button className="nav-link" onClick={() => setAuthOpen(true)}>Sign in</button>
             )}
-            <button className="btn btn-primary btn-sm" onClick={() => go('onboarding')}>
-              Get started <Icon.Arrow size={14} />
+            <button className="btn btn-primary btn-sm" onClick={() => go(hasExistingPlan ? 'dashboard' : 'onboarding')}>
+              {hasExistingPlan ? "See what's cookin'" : 'Get started'} <Icon.Arrow size={14} />
             </button>
           </>
         )}

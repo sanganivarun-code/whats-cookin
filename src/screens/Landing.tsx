@@ -1,11 +1,15 @@
 import type { AppRoute } from '../types/store'
 import { Icon, FoodGlyph } from '../components/Icons'
+import { useStore } from '../context/StoreContext'
 
 interface LandingProps {
   go: (r: AppRoute) => void
 }
 
 export function Landing({ go }: LandingProps) {
+  const { signedIn, authLoading, generatedPlan } = useStore()
+  const hasExistingPlan = !authLoading && signedIn && generatedPlan !== null
+
   return (
     <div className="page">
       {/* HERO */}
@@ -24,12 +28,20 @@ export function Landing({ go }: LandingProps) {
             no surprise calories.
           </p>
           <div className="row gap-3 mt-6">
-            <button className="btn btn-accent btn-lg" onClick={() => go('onboarding')}>
-              Plan my week <Icon.Arrow />
-            </button>
-            <button className="btn btn-ghost btn-lg" onClick={() => go('dashboard')}>
-              See a sample plan
-            </button>
+            {hasExistingPlan ? (
+              <button className="btn btn-accent btn-lg" onClick={() => go('dashboard')}>
+                Your week's ready <Icon.Arrow />
+              </button>
+            ) : (
+              <>
+                <button className="btn btn-accent btn-lg" onClick={() => go('onboarding')}>
+                  Plan my week <Icon.Arrow />
+                </button>
+                <button className="btn btn-ghost btn-lg" onClick={() => go('dashboard')}>
+                  See a sample plan
+                </button>
+              </>
+            )}
           </div>
           <div className="row gap-4 mt-6 muted" style={{ fontSize: 13 }}>
             <span className="row gap-2"><Icon.Check size={12} /> Honors your dietary needs</span>
@@ -118,8 +130,8 @@ export function Landing({ go }: LandingProps) {
         <p className="lead" style={{ margin: '12px auto 24px' }}>
           Six minutes from here to a week's worth of meals on your fridge.
         </p>
-        <button className="btn btn-accent btn-lg" onClick={() => go('onboarding')}>
-          Plan my week <Icon.Arrow />
+        <button className="btn btn-accent btn-lg" onClick={() => go(hasExistingPlan ? 'dashboard' : 'onboarding')}>
+          {hasExistingPlan ? "Your week's ready" : 'Plan my week'} <Icon.Arrow />
         </button>
       </section>
     </div>
