@@ -2,7 +2,6 @@ import { useState } from 'react'
 import type { AppRoute } from '../types/store'
 import { useStore } from '../context/StoreContext'
 import { Icon, FoodGlyph } from '../components/Icons'
-import { MEALS } from '../data/meals'
 import { RECIPE } from '../data/recipe'
 import { scaleAmt } from '../utils/mealPlan'
 
@@ -11,8 +10,8 @@ interface RecipeProps {
 }
 
 export function Recipe({ go }: RecipeProps) {
-  const r = RECIPE
-  const { favorites, toggleFavorite, groceryEdits, recipeTarget, setRecipeTarget } = useStore()
+  const { favorites, toggleFavorite, groceryEdits, recipeTarget, setRecipeTarget, runtimeRecipes, getMeal } = useStore()
+  const r = (recipeTarget && runtimeRecipes[recipeTarget]) ? runtimeRecipes[recipeTarget] : RECIPE
   // Use the tapped meal for favorites; fall back to the hardcoded recipe id
   const favId = recipeTarget ?? r.id
   const isFav = favorites.has(favId)
@@ -46,8 +45,8 @@ export function Recipe({ go }: RecipeProps) {
 
       <div className="page-header mb-6">
         <div style={{ maxWidth: 700 }}>
-          {recipeTarget && MEALS[recipeTarget] && MEALS[recipeTarget].id !== r.id && (
-            <div className="eyebrow mb-2">{MEALS[recipeTarget].name}</div>
+          {recipeTarget && getMeal(recipeTarget) && getMeal(recipeTarget)!.id !== r.id && (
+            <div className="eyebrow mb-2">{getMeal(recipeTarget)!.name}</div>
           )}
           <h1 className="h-1">{r.name}</h1>
           <p className="lead mt-2">{r.subtitle}</p>
@@ -199,7 +198,7 @@ export function Recipe({ go }: RecipeProps) {
             <div className="eyebrow mb-2">Pairs well with</div>
             <div className="col gap-2 mt-2">
               {r.pairsWith.map((id) => {
-                const m = MEALS[id]
+                const m = getMeal(id)
                 if (!m) return null
                 return (
                   <button key={id} className="row gap-3" onClick={() => { setRecipeTarget(id); go('recipe') }}

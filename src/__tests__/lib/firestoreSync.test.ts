@@ -1,8 +1,8 @@
 // Tests for the pure serialization helpers in firestoreSync.ts.
-// No Firebase mocking is needed because planToDays / docToPlan have zero
-// Firestore dependency — they work on plain objects only.
+// No Firebase mocking is needed because planToDays / docToPlan / docToExtendedPlan
+// have zero Firestore dependency — they work on plain objects only.
 
-import { planToDays, docToPlan } from '../../lib/firestoreSync'
+import { planToDays, docToPlan, docToExtendedPlan } from '../../lib/firestoreSync'
 import { PLAN } from '../../data/meals'
 import type { MealPlan } from '../../types/meal'
 
@@ -117,5 +117,98 @@ describe('docToPlan', () => {
     const serialised = { days: planToDays(PLAN) }
     const result = docToPlan(serialised)
     expect(result).toEqual(PLAN)
+  })
+})
+
+// ─── docToExtendedPlan ────────────────────────────────────────────────────────
+
+describe('docToExtendedPlan', () => {
+  const validDay = { breakfast: 'poha', lunch: 'chana', snack: 'trail', dinner: 'rajma', leftover: null }
+  const sevenDays = Array<typeof validDay>(7).fill(validDay)
+
+  const validBase = { days: sevenDays }
+
+  it('returns null when the days array is invalid (delegates to docToPlan)', () => {
+    expect(docToExtendedPlan(null)).toBeNull()
+    expect(docToExtendedPlan({})).toBeNull()
+    expect(docToExtendedPlan({ days: sevenDays.slice(0, 6) })).toBeNull()
+  })
+
+  it('returns a result with a valid plan when days is correct', () => {
+    const result = docToExtendedPlan(validBase)
+    expect(result).not.toBeNull()
+    expect(result!.plan).toHaveLength(7)
+  })
+
+  it('defaults source to local-generator when field is absent', () => {
+    expect(docToExtendedPlan(validBase)!.source).toBe('local-generator')
+  })
+
+  it('defaults source to local-generator for unrecognised source values', () => {
+    expect(docToExtendedPlan({ ...validBase, source: 'unknown' })!.source).toBe('local-generator')
+    expect(docToExtendedPlan({ ...validBase, source: null })!.source).toBe('local-generator')
+  })
+
+  it('returns source gemini when field equals "gemini"', () => {
+    expect(docToExtendedPlan({ ...validBase, source: 'gemini' })!.source).toBe('gemini')
+  })
+
+  it('returns runtimeMeals when present as a plain object', () => {
+    const runtimeMeals = { poha: { id: 'poha', name: 'Poha' } }
+    const result = docToExtendedPlan({ ...validBase, runtimeMeals })
+    expect(result!.runtimeMeals).toEqual(runtimeMeals)
+  })
+
+  it('defaults runtimeMeals to empty object when field is absent', () => {
+    expect(docToExtendedPlan(validBase)!.runtimeMeals).toEqual({})
+  })
+
+  it('defaults runtimeMeals to empty object when field is an array', () => {
+    expect(docToExtendedPlan({ ...validBase, runtimeMeals: [] })!.runtimeMeals).toEqual({})
+  })
+
+  it('returns runtimeRecipes when present as a plain object', () => {
+    const runtimeRecipes = { poha: { id: 'poha', name: 'Poha Recipe' } }
+    const result = docToExtendedPlan({ ...validBase, runtimeRecipes })
+    expect(result!.runtimeRecipes).toEqual(runtimeRecipes)
+  })
+
+  it('defaults runtimeRecipes to empty object when field is absent', () => {
+    expect(docToExtendedPlan(validBase)!.runtimeRecipes).toEqual({})
+  })
+
+  it('returns runtimeGrocery when present as an array', () => {
+    const runtimeGrocery = [{ section: 'Produce', name: 'Spinach', qty: '200g' }]
+    const result = docToExtendedPlan({ ...validBase, runtimeGrocery })
+    expect(result!.runtimeGrocery).toEqual(runtimeGrocery)
+  })
+
+  it('defaults runtimeGrocery to empty array when field is absent', () => {
+    expect(docToExtendedPlan(validBase)!.runtimeGrocery).toEqual([])
+  })
+
+  it('defaults runtimeGrocery to empty array when field is not an array', () => {
+    expect(docToExtendedPlan({ ...validBase, runtimeGrocery: {} })!.runtimeGrocery).toEqual([])
+  })
+
+  it('handles a full extended plan document (as saved by saveExtendedPlan)', () => {
+    const runtimeMeals  = { dal: { id: 'dal', name: 'Dal', glyph: 'Bowl', tone: 'paprika', kcal: 400, p: 18, c: 50, fat: 8, sugar: 3, fiber: 7, time: 25 } }
+    const runtimeRecipes = { dal: { id: 'dal', name: 'Dal Recipe', steps: ['Cook the dal'] } }
+    const runtimeGrocery = [{ section: 'Grains', name: 'Red lentils', qty: '1 cup' }]
+    const doc = { days: sevenDays, source: 'gemini', runtimeMeals, runtimeRecipes, runtimeGrocery }
+    const result = docToExtendedPlan(doc)
+    expect(result).not.toBeNull()
+    expect(result!.source).toBe('gemini')
+    expect(result!.runtimeMeals['dal'].name).toBe('Dal')
+    expect(result!.runtimeGrocery[0].name).toBe('Red lentils')
+  })
+
+  it('handles old-format documents (no source / runtime fields) without error', () => {
+    const oldDoc = { days: sevenDays, uid: 'user123', createdAt: new Date() }
+    const result = docToExtendedPlan(oldDoc)
+    expect(result).not.toBeNull()
+    expect(result!.source).toBe('local-generator')
+    expect(result!.runtimeMeals).toEqual({})
+    expect(result!.runtimeGrocery).toEqual([])
   })
 })

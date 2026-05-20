@@ -1,4 +1,4 @@
-import type { MealSlot, MealPlan } from './meal'
+import type { MealSlot, MealPlan, Meal, Recipe } from './meal'
 import type {
   GroceryTagMap,
   PantryMap,
@@ -119,4 +119,25 @@ export interface StoreState {
   // Generated plan: set on onboarding completion; replaces the static PLAN fallback
   generatedPlan: MealPlan | null
   setGeneratedPlan: (plan: MealPlan) => void
+
+  // AI generation state
+  planSource: 'gemini' | 'local-generator' | null
+  generationLoading: boolean
+  generationError: string | null   // non-null means fallback was used; shown as a notice in Dashboard
+
+  // Runtime meal/recipe/grocery data populated by a successful Gemini generation.
+  // Empty for local-generator plans, which use the static MEALS / RECIPE data.
+  runtimeMeals:   Record<string, Meal>
+  runtimeRecipes: Record<string, Recipe>
+  runtimeGrocery: Array<{ section: string; name: string; qty: string }>
+
+  // Unified meal lookup: runtimeMeals first, then static MEALS, then undefined.
+  getMeal: (id: string) => Meal | undefined
+
+  // Starts async plan generation (Gemini when signed in, local fallback otherwise).
+  // Fire-and-forget — drives generationLoading/generationError/generatedPlan state.
+  generatePlanAsync: (state: OnboardingState) => void
+
+  // Saves the current generated plan to Firestore. Called from Dashboard "Save plan" button.
+  savePlanToCloud: () => void
 }

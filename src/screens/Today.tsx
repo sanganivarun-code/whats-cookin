@@ -3,7 +3,7 @@ import type { AppRoute } from '../types/store'
 import type { Meal, MealSlot } from '../types/meal'
 import { useStore } from '../context/StoreContext'
 import { Icon, FoodGlyph } from '../components/Icons'
-import { MEALS, DAYS, PLAN, TODAY_INDEX } from '../data/meals'
+import { DAYS, PLAN, TODAY_INDEX } from '../data/meals'
 import { MEAL_SLOT_LIST } from '../utils/mealPlan'
 
 interface TodayProps {
@@ -21,7 +21,7 @@ interface TodayEntry {
 }
 
 export function Today({ go }: TodayProps) {
-  const { favorites, toggleFavorite, getOverride, setEditTarget, setRecipeTarget, profile, user, generatedPlan } = useStore()
+  const { favorites, toggleFavorite, getOverride, setEditTarget, setRecipeTarget, profile, user, generatedPlan, getMeal } = useStore()
   const [cooked, setCooked] = useState<Record<string, boolean>>({})
 
   const dayIndex = TODAY_INDEX
@@ -34,7 +34,7 @@ export function Today({ go }: TodayProps) {
 
   const meals: TodayEntry[] = MEAL_SLOT_LIST.flatMap((slot): TodayEntry[] => {
     if (slot.key === 'lunch' && planDay.leftover) {
-      const m = MEALS[planDay.leftover] ?? null
+      const m = getMeal(planDay.leftover) ?? null
       return [{ key: slot.key, label: slot.label, meal: m, leftover: true }]
     }
     const override = getOverride(dayIndex, slot.key)
@@ -43,10 +43,10 @@ export function Today({ go }: TodayProps) {
       return [{ key: slot.key, label: slot.label, meal: null, eatingOut: true }]
     }
     if (override && (override.kind === 'self-cook' || override.kind === 'custom')) {
-      const m = override.kind === 'custom' && override.mealId ? (MEALS[override.mealId] ?? null) : null
+      const m = override.kind === 'custom' && override.mealId ? (getMeal(override.mealId) ?? null) : null
       return [{ key: slot.key, label: slot.label, meal: m, selfCook: true, name: override.name }]
     }
-    return [{ key: slot.key, label: slot.label, meal: MEALS[planDay[slot.key]] ?? null }]
+    return [{ key: slot.key, label: slot.label, meal: getMeal(planDay[slot.key]) ?? null }]
   })
 
   const dayKcal = meals.reduce((s, m) => s + (m.meal?.kcal ?? 0), 0)

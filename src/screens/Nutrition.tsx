@@ -3,22 +3,23 @@ import type { GlyphKind, ColorTone } from '../types/meal'
 import { Icon, FoodGlyph } from '../components/Icons'
 import { PageHeader } from '../components/PageHeader'
 import { useStore } from '../context/StoreContext'
-import { MEALS, DAYS, PLAN, TODAY_INDEX } from '../data/meals'
+import { DAYS, PLAN, TODAY_INDEX } from '../data/meals'
 
 interface NutritionProps {
   go: (r: AppRoute) => void
 }
 
 export function Nutrition({ go }: NutritionProps) {
-  const { profile } = useStore()
+  const { profile, generatedPlan, getMeal } = useStore()
   const goalKcal    = profile?.goalKcal    ?? 1900
   const goalProtein = profile?.goalProtein ?? 110
 
-  const dayTotals = PLAN.map((day) => {
+  const activePlan = generatedPlan ?? PLAN
+  const dayTotals = activePlan.map((day) => {
     const keys = ['breakfast', 'lunch', 'snack', 'dinner'] as const
     return keys.reduce(
       (acc, k) => {
-        const m = MEALS[day[k]]
+        const m = getMeal(day[k])
         if (!m) return acc
         return { kcal: acc.kcal + m.kcal, p: acc.p + m.p, c: acc.c + m.c, fat: acc.fat + m.fat, sugar: acc.sugar + m.sugar, fiber: acc.fiber + m.fiber }
       },

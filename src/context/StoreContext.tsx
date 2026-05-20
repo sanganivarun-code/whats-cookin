@@ -2,14 +2,18 @@ import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import type { StoreState, Override, OverrideMap, AppUser, EditTarget } from '../types/store'
 import type { GroceryTagMap, PantryMap, GroceryEditMap, GroceryAdditionsMap, GroceryEdit } from '../types/grocery'
-import type { MealSlot, MealPlan } from '../types/meal'
+import type { MealSlot, MealPlan, Meal, Recipe } from '../types/meal'
 import type { OnboardingState, UserProfile } from '../types/profile'
 import { firebaseServices } from '../lib/firebase'
 import { onAuthStateChanged, signInWithPopup, signOut as fbSignOut } from 'firebase/auth'
 import {
-  savePlan, loadLatestPlan,
+  saveExtendedPlan, loadLatestExtendedPlan,
   saveFavorite, removeFavorite, loadFavorites,
 } from '../lib/firestoreSync'
+import type { PlanSource } from '../lib/firestoreSync'
+import { callGenerateMealPlan } from '../lib/geminiClient'
+import { generatePlan } from '../utils/generatePlan'
+import { MEALS } from '../data/meals'
 
 const StoreContext = createContext<StoreState | null>(null)
 
@@ -39,12 +43,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [recipeTarget, setRecipeTarget] = useState<string | null>(null)
 
   // Internal state setter; public API goes through the setGeneratedPlan wrapper
-  // which also keeps the ref and Firestore in sync.
+  // which also keeps the ref in sync.
   const [generatedPlan, setGeneratedPlanState] = useState<MealPlan | null>(null)
 
   // Ref mirrors generatedPlan so the onAuthStateChanged callback always sees
   // the current value without needing to re-subscribe on every state change.
   const generatedPlanRef = useRef<MealPlan | null>(null)
+
+  // AI generation state
+  const [planSource, setPlanSource] = useState<PlanSource | null>(null)
+  const [generationLoading, setGenerationLoading] = useState(false)
+  const [generationError, setGenerationError] = useState<string | null>(null)
+
+  // Runtime data populated by a successful Gemini generation.
+  // Empty for local-generator plans, which fall back to static MEALS / RECIPE.
+  const [runtimeMeals,   setRuntimeMeals]   = useState<Record<string, Meal>>({})
+  const [runtimeRecipes, setRuntimeRecipes] = useState<Record<string, Recipe>>({})
+  const [runtimeGrocery, setRuntimeGrocery] = useState<Array<{ section: string; name: string; qty: string }>>([])
 
   const [groceryTags, setGroceryTags] = useState<GroceryTagMap>({
     'Paneer':                    'Indian Grocery',
@@ -90,11 +105,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // Load remote data in parallel, then update state
       void (async () => {
         try {
-          const [remoteFavs, remotePlan] = await Promise.all([
+          const [remoteFavs, remoteExtended] = await Promise.all([
             loadFavorites(db, fbUser.uid),
             // Only fetch remote plan when there is no locally generated plan
             generatedPlanRef.current === null
-              ? loadLatestPlan(db, fbUser.uid)
+              ? loadLatestExtendedPlan(db, fbUser.uid)
               : Promise.resolve(null),
           ])
 
@@ -103,13 +118,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             setFavorites(prev => new Set([...prev, ...remoteFavs]))
           }
 
-          if (remotePlan) {
-            // Remote plan found and no local plan — restore the last saved plan
-            setGeneratedPlanState(remotePlan)
-            generatedPlanRef.current = remotePlan
-          } else if (generatedPlanRef.current) {
-            // Local plan exists — push it to Firestore so it is saved under this user
-            savePlan(db, fbUser.uid, generatedPlanRef.current).catch(console.error)
+          if (remoteExtended) {
+            // Remote plan found — restore it with its runtime meal/recipe/grocery data
+            setGeneratedPlanState(remoteExtended.plan)
+            generatedPlanRef.current = remoteExtended.plan
+            setRuntimeMeals(remoteExtended.runtimeMeals)
+            setRuntimeRecipes(remoteExtended.runtimeRecipes)
+            setRuntimeGrocery(remoteExtended.runtimeGrocery)
+            setPlanSource(remoteExtended.source)
+            setPlanSaved(true)
+          } else {
+            // No remote plan. Local plan (if any) stays in state.
+            // User must click Save explicitly — no auto-push to Firestore.
+            setPlanSaved(false)
           }
 
           setUser({
@@ -119,7 +140,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           })
           setSignedIn(true)
           setAuthOpen(false)
-          setPlanSaved(true)
         } catch (err) {
           console.error('Auth state sync error', err)
         }
@@ -198,17 +218,76 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // ─── Generated plan (local + Firestore sync) ──────────────────────────────
 
-  // Public setter: keeps the ref and Firestore in sync alongside React state.
+  // Public setter: keeps the ref in sync alongside React state.
+  // Does NOT auto-save to Firestore — user triggers save explicitly via Dashboard.
   const setGeneratedPlan = (plan: MealPlan) => {
     setGeneratedPlanState(plan)
     generatedPlanRef.current = plan
+  }
 
-    if (firebaseServices) {
-      const uid = firebaseServices.auth.currentUser?.uid
-      if (uid) {
-        savePlan(firebaseServices.db, uid, plan).catch(console.error)
+  // Unified meal lookup: runtime (Gemini) meals first, then static MEALS.
+  const getMeal = (id: string): Meal | undefined => runtimeMeals[id] ?? MEALS[id]
+
+  // Saves the current generated plan to Firestore. Called from Dashboard.
+  // No-op when Firebase is not configured or no plan exists.
+  const savePlanToCloud = (): void => {
+    if (!firebaseServices || !generatedPlanRef.current) return
+    const uid = firebaseServices.auth.currentUser?.uid
+    if (!uid) return
+    saveExtendedPlan(firebaseServices.db, uid, {
+      plan:           generatedPlanRef.current,
+      source:         planSource ?? 'local-generator',
+      runtimeMeals:   planSource === 'gemini' ? runtimeMeals   : undefined,
+      runtimeRecipes: planSource === 'gemini' ? runtimeRecipes : undefined,
+      runtimeGrocery: planSource === 'gemini' ? runtimeGrocery : undefined,
+    })
+      .then(() => setPlanSaved(true))
+      .catch(err => console.error('Save plan error', err))
+  }
+
+  // Starts async plan generation. Fire-and-forget from callers (Onboarding).
+  // Drives generationLoading / generationError / generatedPlan state so the
+  // Loading screen knows when generation is done.
+  const generatePlanAsync = (state: OnboardingState): void => {
+    setGenerationLoading(true)
+    setGenerationError(null)
+
+    void (async () => {
+      try {
+        if (signedIn && firebaseServices) {
+          try {
+            const response = await callGenerateMealPlan(state)
+            setGeneratedPlanState(response.days as MealPlan)
+            generatedPlanRef.current = response.days as MealPlan
+            setRuntimeMeals(response.meals)
+            setRuntimeRecipes(response.recipes)
+            setRuntimeGrocery(response.groceryItems)
+            setPlanSource('gemini')
+            setPlanSaved(false)
+            return
+          } catch (err: unknown) {
+            const code = (err as { code?: string }).code ?? ''
+            const msg = code === 'functions/resource-exhausted'
+              ? 'Daily AI generation limit reached. Your plan was generated locally instead.'
+              : 'AI generation was unavailable. Your plan was generated locally instead.'
+            setGenerationError(msg)
+            // Fall through to local generation below
+          }
+        }
+
+        // Local generation: signed-out users, or Gemini failed
+        const localPlan = generatePlan(state)
+        setGeneratedPlanState(localPlan)
+        generatedPlanRef.current = localPlan
+        setRuntimeMeals({})
+        setRuntimeRecipes({})
+        setRuntimeGrocery([])
+        setPlanSource('local-generator')
+        setPlanSaved(false)
+      } finally {
+        setGenerationLoading(false)
       }
-    }
+    })()
   }
 
   // ─── Grocery helpers ──────────────────────────────────────────────────────
@@ -277,6 +356,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     profile, setProfile,
     recipeTarget, setRecipeTarget,
     generatedPlan, setGeneratedPlan,
+    planSource, generationLoading, generationError,
+    runtimeMeals, runtimeRecipes, runtimeGrocery,
+    getMeal, generatePlanAsync, savePlanToCloud,
   }
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

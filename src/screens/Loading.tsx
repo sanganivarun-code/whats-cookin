@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import type { AppRoute } from '../types/store'
+import { useStore } from '../context/StoreContext'
 
 interface LoadingProps {
   go: (r: AppRoute) => void
   nextRoute?: AppRoute
-  delay?: number
+  minDelay?: number  // minimum milliseconds to show the loading screen (default 2000)
 }
 
 const COOKING_QUOTES = [
@@ -60,16 +61,31 @@ const Loaf = () => (
   </svg>
 )
 
-export function Loading({ go, nextRoute = 'dashboard', delay = 3000 }: LoadingProps) {
+export function Loading({ go, nextRoute = 'dashboard', minDelay = 2000 }: LoadingProps) {
+  const { generationLoading } = useStore()
   const [quoteIdx, setQuoteIdx] = useState(() => Math.floor(Math.random() * COOKING_QUOTES.length))
   const [iconIdx, setIconIdx] = useState(0)
+  const [minDelayDone, setMinDelayDone] = useState(false)
 
+  // Cycle the visual animation independently of navigation logic
   useEffect(() => {
     const ti = setInterval(() => setIconIdx((i) => (i + 1) % 4), 700)
     const tq = setInterval(() => setQuoteIdx((i) => (i + 1) % COOKING_QUOTES.length), 1800)
-    const done = setTimeout(() => go(nextRoute), delay)
-    return () => { clearInterval(ti); clearInterval(tq); clearTimeout(done) }
-  }, [go, nextRoute, delay])
+    return () => { clearInterval(ti); clearInterval(tq) }
+  }, [])
+
+  // Enforce a minimum display time so the loading screen doesn't flash by
+  useEffect(() => {
+    const t = setTimeout(() => setMinDelayDone(true), minDelay)
+    return () => clearTimeout(t)
+  }, [minDelay])
+
+  // Navigate once generation is complete AND the minimum delay has passed
+  useEffect(() => {
+    if (!generationLoading && minDelayDone) {
+      go(nextRoute)
+    }
+  }, [generationLoading, minDelayDone, go, nextRoute])
 
   return (
     <div className="loading-screen">

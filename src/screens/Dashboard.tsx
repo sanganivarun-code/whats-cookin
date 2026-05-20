@@ -2,7 +2,7 @@ import type { AppRoute } from '../types/store'
 import { useStore } from '../context/StoreContext'
 import { Icon } from '../components/Icons'
 import { PageHeader } from '../components/PageHeader'
-import { MEALS, DAYS, PLAN, TODAY_INDEX } from '../data/meals'
+import { DAYS, PLAN, TODAY_INDEX } from '../data/meals'
 import { MEAL_SLOT_LIST } from '../utils/mealPlan'
 
 interface DashboardProps {
@@ -12,7 +12,7 @@ interface DashboardProps {
 // ─── Calendar view ────────────────────────────────────────────────────────────
 
 function CalendarView({ go }: { go: (r: AppRoute) => void }) {
-  const { favorites, toggleFavorite, getOverride, setEditTarget, setRecipeTarget, generatedPlan } = useStore()
+  const { favorites, toggleFavorite, getOverride, setEditTarget, setRecipeTarget, generatedPlan, getMeal } = useStore()
   const activePlan = generatedPlan ?? PLAN
 
   return (
@@ -36,15 +36,15 @@ function CalendarView({ go }: { go: (r: AppRoute) => void }) {
             {planDay.leftover && (
               <button className="meal-card leftover" onClick={() => { setRecipeTarget(planDay.leftover!); go('recipe') }}>
                 <span className="meal-eyebrow"><Icon.Leaf size={10} /> Leftover lunch</span>
-                <span className="meal-name">{MEALS[planDay.leftover]?.name}</span>
-                <span className="meal-kcal">{MEALS[planDay.leftover]?.kcal} kcal</span>
+                <span className="meal-name">{getMeal(planDay.leftover)?.name}</span>
+                <span className="meal-kcal">{getMeal(planDay.leftover)?.kcal} kcal</span>
               </button>
             )}
 
             {MEAL_SLOT_LIST.map((slot) => {
               if (slot.key === 'lunch' && planDay.leftover) return null
               const override = getOverride(i, slot.key)
-              const meal = MEALS[planDay[slot.key]]
+              const meal = getMeal(planDay[slot.key])
 
               if (override && override.kind === 'removed') {
                 return (
@@ -73,7 +73,7 @@ function CalendarView({ go }: { go: (r: AppRoute) => void }) {
               }
 
               if (override && (override.kind === 'self-cook' || override.kind === 'custom')) {
-                const m = override.kind === 'custom' && override.mealId ? MEALS[override.mealId] : null
+                const m = override.kind === 'custom' && override.mealId ? getMeal(override.mealId) ?? null : null
                 if (m) { dayKcal += m.kcal; dayP += m.p }
                 return (
                   <div key={slot.key} className="meal-card self-cook" style={{ position: 'relative' }}>
@@ -130,16 +130,16 @@ function CalendarView({ go }: { go: (r: AppRoute) => void }) {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export function Dashboard({ go }: DashboardProps) {
-  const { signedIn, setAuthOpen, planSaved, favorites, profile, generatedPlan } = useStore()
+  const { signedIn, setAuthOpen, planSaved, favorites, profile, generatedPlan, getMeal, generationError, savePlanToCloud } = useStore()
   const activePlan = generatedPlan ?? PLAN
 
   const avgKcal = Math.round(
     activePlan.reduce((s, day) =>
-      s + MEAL_SLOT_LIST.reduce((acc, slot) => acc + (MEALS[day[slot.key]]?.kcal ?? 0), 0), 0) / 7
+      s + MEAL_SLOT_LIST.reduce((acc, slot) => acc + (getMeal(day[slot.key])?.kcal ?? 0), 0), 0) / 7
   )
   const avgP = Math.round(
     activePlan.reduce((s, day) =>
-      s + MEAL_SLOT_LIST.reduce((acc, slot) => acc + (MEALS[day[slot.key]]?.p ?? 0), 0), 0) / 7
+      s + MEAL_SLOT_LIST.reduce((acc, slot) => acc + (getMeal(day[slot.key])?.p ?? 0), 0), 0) / 7
   )
 
   return (
@@ -162,7 +162,22 @@ export function Dashboard({ go }: DashboardProps) {
           <span className="save-status"><span className="dot" /> Saved · synced 2 minutes ago</span>
           <span className="muted" style={{ fontSize: 12 }}>· May 19 plan</span>
         </div>
+      ) : generatedPlan ? (
+        <div className="save-banner">
+          <div className="left">
+            <Icon.Sparkle />
+            <span>Your plan is ready. <em>Save it</em> to sync across devices and keep it for next time.</span>
+          </div>
+          <button className="btn btn-accent btn-sm" onClick={savePlanToCloud}>Save plan</button>
+        </div>
       ) : null}
+
+      {generationError && (
+        <div style={{ background: 'var(--bg-warm)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: 'var(--ink-soft)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Icon.Sparkle size={13} />
+          {generationError}
+        </div>
+      )}
 
       <PageHeader
         eyebrow="This week · May 19 – 25"

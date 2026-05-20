@@ -21,6 +21,38 @@ npm install
 
 ---
 
+## AI meal generation (Gemini via Firebase Functions)
+
+The AI plan generation feature calls Gemini through a Firebase Cloud Function so the API key stays server-side. This requires a few one-time steps.
+
+**Billing:** Firebase Functions (v2) requires the **Blaze (pay-as-you-go)** plan. Enable it in the Firebase console under *Upgrade project*. Gemini API calls via this app are low-volume; the free tier of Cloud Functions covers most development usage.
+
+**Deploy the function:**
+
+```bash
+# 1. Install function dependencies
+cd functions && npm install && npm run build && cd ..
+
+# 2. Store your Gemini API key in Secret Manager (never in code or .env.local)
+firebase secrets:set GEMINI_API_KEY
+# Paste your key when prompted — it is stored encrypted in Google Cloud Secret Manager
+
+# 3. Update .firebaserc with your real project ID, then deploy
+firebase deploy --only functions
+```
+
+**Local emulation (optional):**
+
+```bash
+firebase emulators:start --only functions
+```
+
+When running against the emulator, the frontend's `VITE_FIREBASE_FUNCTIONS_REGION` must match the emulator's region. See `.env.local.example` for the variable name.
+
+**Without the function:** The app degrades gracefully — plans are generated locally with the deterministic generator and a banner is shown on the Dashboard.
+
+---
+
 ## Scripts
 
 | Command | What it does |
@@ -52,15 +84,11 @@ project/        Claude Design prototype — reference only, do not edit
 
 ---
 
-## Future backend notes
+## Backend integration points
 
-These integration points are marked with `// FUTURE:` comments in the source so they are easy to find when the time comes.
-
-| Area | File | Notes |
+| Area | Status | Notes |
 |---|---|---|
-| Meal plan generation | `src/utils/mealPlan.ts` | Currently returns static mock data. A Gemini API call will replace the generation stub here. No API keys or SDK should be added until this is intentional. |
-| Grocery aggregation | `src/utils/grocery.ts` | Currently aggregates the static `GROCERY` constant. A server-side endpoint may replace this once plans are generated dynamically. |
-| Authentication | `src/store/StoreContext.tsx` | The `signedIn` flag is purely in-memory today. Supabase or Firebase auth wires in here. |
-| Persistence | `src/store/StoreContext.tsx` | `favorites`, `overrides`, `groceryTags`, and `pantryHave` are all in-memory. They will sync to a database once auth exists. |
-
-No environment variables, secrets, API keys, or backend dependencies exist in this repository today.
+| Meal plan generation | Live (Gemini) | `functions/src/index.ts` — `generateMealPlan` callable. Falls back to local generator when unavailable. |
+| Authentication | Live (Firebase Auth) | Google sign-in via popup. Signed-out users get the full local experience. |
+| Cloud persistence | Live (Firestore) | Plans, favorites saved to Firestore. Manual save — user clicks "Save plan" from Dashboard. |
+| Grocery aggregation | Static | Aggregates `src/data/grocery.ts` for local plans; uses `runtimeGrocery` returned by Gemini for AI plans. |

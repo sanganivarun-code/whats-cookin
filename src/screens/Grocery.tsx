@@ -379,6 +379,7 @@ export function Grocery({ go }: GroceryProps) {
     pantryHave, setHave,
     groceryEdits, setGroceryEdit,
     groceryAdditions, addGroceryItem, removeGroceryAddition,
+    planSource, runtimeGrocery,
   } = useStore()
 
   const [view, setView] = useState<'section' | 'store'>('section')
@@ -390,10 +391,28 @@ export function Grocery({ go }: GroceryProps) {
 
   const toggle = (id: string) => setChecked((p) => ({ ...p, [id]: !p[id] }))
 
-  const sections = useMemo(
-    () => buildDisplaySections(GROCERY, groceryEdits, groceryAdditions),
-    [groceryEdits, groceryAdditions],
-  )
+  const sections = useMemo<DisplayGrocerySection[]>(() => {
+    if (planSource === 'gemini' && runtimeGrocery.length > 0) {
+      const map = new Map<string, DisplayGroceryItem[]>()
+      runtimeGrocery.forEach(({ section, name, qty }) => {
+        if (!map.has(section)) map.set(section, [])
+        map.get(section)!.push({ originalName: name, name, qty, renamed: false, quantified: false })
+      })
+      const result: DisplayGrocerySection[] = []
+      map.forEach((items, section) => {
+        const adds = groceryAdditions[section] ?? []
+        result.push({
+          section,
+          items: [
+            ...items,
+            ...adds.map(a => ({ originalName: a.name, name: a.name, qty: a.qty, renamed: false, quantified: false, custom: true as const, id: a.id })),
+          ],
+        })
+      })
+      return result
+    }
+    return buildDisplaySections(GROCERY, groceryEdits, groceryAdditions)
+  }, [planSource, runtimeGrocery, groceryEdits, groceryAdditions])
 
   const itemsByStore = useMemo(
     () => buildItemsByStore(sections, groceryTags),

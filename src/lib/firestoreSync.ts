@@ -15,7 +15,7 @@ import {
   doc, setDoc, deleteDoc,
   serverTimestamp,
 } from 'firebase/firestore'
-import type { MealPlan, DayPlan } from '../types/meal'
+import type { MealPlan, DayPlan, Meal, Recipe } from '../types/meal'
 
 // ─── Pure serialization (no Firebase types) ────────────────────────────────────
 
@@ -87,4 +87,84 @@ export async function removeFavorite(db: Firestore, uid: string, mealId: string)
 export async function loadFavorites(db: Firestore, uid: string): Promise<Set<string>> {
   const snap = await getDocs(collection(db, 'users', uid, 'favorites'))
   return new Set(snap.docs.map(d => d.id))
+}
+
+// ─── Extended plan (Gemini-generated plans with runtime meal/recipe/grocery) ───
+// Stored in the same users/{uid}/plans collection.
+// Extra fields are absent in documents saved by the original savePlan() —
+// docToExtendedPlan defaults gracefully so old documents still load correctly.
+
+export type PlanSource = 'gemini' | 'local-generator'
+
+export interface LoadedExtendedPlan {
+  plan:          MealPlan
+  source:        PlanSource
+  runtimeMeals:  Record<string, Meal>
+  runtimeRecipes: Record<string, Recipe>
+  runtimeGrocery: Array<{ section: string; name: string; qty: string }>
+}
+
+// Pure serialization helper — converts a raw Firestore document to a
+// LoadedExtendedPlan or null. No Firebase types; safe to unit-test directly.
+export function docToExtendedPlan(data: unknown): LoadedExtendedPlan | null {
+  // Re-use the existing days validator to avoid duplicating that logic.
+  const plan = docToPlan(data)
+  if (!plan) return null
+
+  const d = data as Record<string, unknown>
+
+  const source: PlanSource = d['source'] === 'gemini' ? 'gemini' : 'local-generator'
+
+  const runtimeMeals: Record<string, Meal> =
+    d['runtimeMeals'] && typeof d['runtimeMeals'] === 'object' && !Array.isArray(d['runtimeMeals'])
+      ? (d['runtimeMeals'] as Record<string, Meal>)
+      : {}
+
+  const runtimeRecipes: Record<string, Recipe> =
+    d['runtimeRecipes'] && typeof d['runtimeRecipes'] === 'object' && !Array.isArray(d['runtimeRecipes'])
+      ? (d['runtimeRecipes'] as Record<string, Recipe>)
+      : {}
+
+  const runtimeGrocery: Array<{ section: string; name: string; qty: string }> =
+    Array.isArray(d['runtimeGrocery']) ? d['runtimeGrocery'] as Array<{ section: string; name: string; qty: string }> : []
+
+  return { plan, source, runtimeMeals, runtimeRecipes, runtimeGrocery }
+}
+
+// Saves an extended plan document and returns the new document ID.
+// For Gemini plans, pass runtimeMeals, runtimeRecipes, and runtimeGrocery.
+// For local plans, omit those fields — the document will match the old savePlan format.
+export async function saveExtendedPlan(
+  db: Firestore,
+  uid: string,
+  payload: {
+    plan:           MealPlan
+    source:         PlanSource
+    runtimeMeals?:  Record<string, Meal>
+    runtimeRecipes?: Record<string, Recipe>
+    runtimeGrocery?: Array<{ section: string; name: string; qty: string }>
+  },
+): Promise<string> {
+  const ref = await addDoc(collection(db, 'users', uid, 'plans'), {
+    uid,
+    createdAt:      serverTimestamp(),
+    source:         payload.source,
+    days:           planToDays(payload.plan),
+    runtimeMeals:   payload.runtimeMeals   ?? {},
+    runtimeRecipes: payload.runtimeRecipes ?? {},
+    runtimeGrocery: payload.runtimeGrocery ?? [],
+  })
+  return ref.id
+}
+
+// Loads the most recently saved extended plan for a user, or null if none exists.
+export async function loadLatestExtendedPlan(db: Firestore, uid: string): Promise<LoadedExtendedPlan | null> {
+  const q = query(
+    collection(db, 'users', uid, 'plans'),
+    orderBy('createdAt', 'desc'),
+    limit(1),
+  )
+  const snap = await getDocs(q)
+  if (snap.empty) return null
+  return docToExtendedPlan(snap.docs[0].data())
 }
