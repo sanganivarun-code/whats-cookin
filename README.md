@@ -1,22 +1,66 @@
-# CODING AGENTS: READ THIS FIRST
+# What's Cookin'?
 
-This is a **handoff bundle** from Claude Design (claude.ai/design).
+A weekly meal planner that builds a personalised, macro-balanced week of meals and one tidy grocery list to shop from. Tell it your goals, dietary preferences, and household size — it handles the rest.
 
-A user mocked up designs in HTML/CSS/JS using an AI design tool, then exported this bundle so a coding agent can implement the designs for real.
+> **Claude Design reference** — the original prototype lives in `project/`. Do not edit that folder. It is the visual source of truth used to guide the production app in `src/`.
 
-## What you should do — IMPORTANT
+---
 
-**Find the primary design file under `what-s-cookin/project/` and read it top to bottom.** Then **follow its imports**: open every file it pulls in (shared components, CSS, scripts) so you understand how the pieces fit together before you start implementing.
+## Prerequisites
 
-**If anything is ambiguous, ask the user to confirm before you start implementing.** It's much cheaper to clarify scope up front than to build the wrong thing.
+- Node.js 20 or later
+- npm 10 or later
 
-## About the design files
+---
 
-The design medium is **HTML/CSS/JS** — these are prototypes, not production code. Your job is to **recreate them pixel-perfectly** in whatever technology makes sense for the target codebase (React, Vue, native, whatever fits). Match the visual output; don't copy the prototype's internal structure unless it happens to fit.
+## Setup
 
-**Don't render these files in a browser or take screenshots unless the user asks you to.** Everything you need — dimensions, colors, layout rules — is spelled out in the source. Read the HTML and CSS directly; a screenshot won't tell you anything they don't.
+```bash
+npm install
+```
 
-## Bundle contents
+---
 
-- `what-s-cookin/README.md` — this file
-- `what-s-cookin/project/` — the `What's Cookin?` project files (HTML prototypes, assets, components)
+## Scripts
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Start the dev server at http://localhost:5173 |
+| `npm run build` | Type-check then compile to `dist/` |
+| `npm run preview` | Serve the production build locally |
+| `npm run test` | Run tests in watch mode (re-runs on save) |
+| `npm run test:run` | Run tests once — use this in CI or to verify a change |
+| `npm run test:coverage` | Run tests once and write a coverage report to `coverage/` |
+
+---
+
+## Project structure
+
+```
+src/
+  types/        TypeScript interfaces for all data shapes
+  data/         Static mock data (typed against those interfaces)
+  utils/        Pure functions — meal plan, grocery, and nutrition logic
+  store/        React context — shared app state
+  components/   Reusable UI primitives (icons, nav, shared chrome)
+  screens/      One file or folder per route
+  overlays/     App-wide modals (auth modal, meal edit sheet)
+  __tests__/    Unit and component tests
+
+project/        Claude Design prototype — reference only, do not edit
+```
+
+---
+
+## Future backend notes
+
+These integration points are marked with `// FUTURE:` comments in the source so they are easy to find when the time comes.
+
+| Area | File | Notes |
+|---|---|---|
+| Meal plan generation | `src/utils/mealPlan.ts` | Currently returns static mock data. A Gemini API call will replace the generation stub here. No API keys or SDK should be added until this is intentional. |
+| Grocery aggregation | `src/utils/grocery.ts` | Currently aggregates the static `GROCERY` constant. A server-side endpoint may replace this once plans are generated dynamically. |
+| Authentication | `src/store/StoreContext.tsx` | The `signedIn` flag is purely in-memory today. Supabase or Firebase auth wires in here. |
+| Persistence | `src/store/StoreContext.tsx` | `favorites`, `overrides`, `groceryTags`, and `pantryHave` are all in-memory. They will sync to a database once auth exists. |
+
+No environment variables, secrets, API keys, or backend dependencies exist in this repository today.
