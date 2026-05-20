@@ -140,17 +140,29 @@ describe('docToExtendedPlan', () => {
     expect(result!.plan).toHaveLength(7)
   })
 
-  it('defaults source to local-generator when field is absent', () => {
-    expect(docToExtendedPlan(validBase)!.source).toBe('local-generator')
+  it('defaults source to local-dev-fallback when field is absent', () => {
+    expect(docToExtendedPlan(validBase)!.source).toBe('local-dev-fallback')
   })
 
-  it('defaults source to local-generator for unrecognised source values', () => {
-    expect(docToExtendedPlan({ ...validBase, source: 'unknown' })!.source).toBe('local-generator')
-    expect(docToExtendedPlan({ ...validBase, source: null })!.source).toBe('local-generator')
+  it('defaults source to local-dev-fallback for unrecognised source values', () => {
+    expect(docToExtendedPlan({ ...validBase, source: 'unknown' })!.source).toBe('local-dev-fallback')
+    expect(docToExtendedPlan({ ...validBase, source: null })!.source).toBe('local-dev-fallback')
+  })
+
+  it('maps legacy local-generator source to local-dev-fallback for backward compatibility', () => {
+    expect(docToExtendedPlan({ ...validBase, source: 'local-generator' })!.source).toBe('local-dev-fallback')
   })
 
   it('returns source gemini when field equals "gemini"', () => {
     expect(docToExtendedPlan({ ...validBase, source: 'gemini' })!.source).toBe('gemini')
+  })
+
+  it('returns source sample when field equals "sample"', () => {
+    expect(docToExtendedPlan({ ...validBase, source: 'sample' })!.source).toBe('sample')
+  })
+
+  it('returns source local-dev-fallback when field equals "local-dev-fallback"', () => {
+    expect(docToExtendedPlan({ ...validBase, source: 'local-dev-fallback' })!.source).toBe('local-dev-fallback')
   })
 
   it('returns runtimeMeals when present as a plain object', () => {
@@ -207,7 +219,7 @@ describe('docToExtendedPlan', () => {
     const oldDoc = { days: sevenDays, uid: 'user123', createdAt: new Date() }
     const result = docToExtendedPlan(oldDoc)
     expect(result).not.toBeNull()
-    expect(result!.source).toBe('local-generator')
+    expect(result!.source).toBe('local-dev-fallback')
     expect(result!.runtimeMeals).toEqual({})
     expect(result!.runtimeGrocery).toEqual([])
   })

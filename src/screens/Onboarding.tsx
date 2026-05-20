@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import type { AppRoute } from '../types/store'
 import type { GlyphKind, ColorTone } from '../types/meal'
 import type { DietaryLine, CuisineId, EmphasisId, FitnessGoal, OnboardingState } from '../types/profile'
@@ -277,11 +277,14 @@ function StepKitchen({ s, set }: StepKitchenProps) {
 // ─── Multi-step shell ─────────────────────────────────────────────────────────
 
 function MultiStep({ go }: { go: (r: AppRoute) => void }) {
-  const { onboardingState, setOnboardingState, setProfile, generatePlanAsync } = useStore()
+  const { onboardingState, setOnboardingState, setProfile, generatePlanAsync, signedIn, setAuthOpen } = useStore()
 
   const [step, setStep] = useState(0)
   // Seed form from previously saved state when re-entering the flow
   const [s, setS] = useState<OnboardState>(() => onboardingState ?? initialState)
+  // True when the user clicked "Generate" while signed out. When sign-in completes,
+  // the useEffect below fires and resumes generation with the preserved state.
+  const [pendingGeneration, setPendingGeneration] = useState(false)
 
   const set = (k: keyof OnboardState, v: unknown) => setS((p) => ({ ...p, [k]: v }))
   const toggle = (k: keyof OnboardState, v: string) =>
@@ -304,9 +307,28 @@ function MultiStep({ go }: { go: (r: AppRoute) => void }) {
     }
     setOnboardingState(canonical)
     setProfile(buildProfile(canonical))
+
+    if (!signedIn) {
+      // Preserve the completed onboarding state and open the auth modal.
+      // Generation resumes automatically once sign-in completes (see useEffect below).
+      setPendingGeneration(true)
+      setAuthOpen(true)
+      return
+    }
+
     generatePlanAsync(canonical) // fire-and-forget; Loading watches generationLoading
     go('loading')
   }
+
+  // Resume generation after the user signs in. onboardingState is already saved
+  // (setOnboardingState was called in handleGenerate before opening the modal).
+  useEffect(() => {
+    if (signedIn && pendingGeneration && onboardingState) {
+      setPendingGeneration(false)
+      generatePlanAsync(onboardingState)
+      go('loading')
+    }
+  }, [signedIn, pendingGeneration, onboardingState, generatePlanAsync, go])
 
   const current = STEPS[step]
 

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { AppRoute } from '../types/store'
 import { useStore } from '../context/StoreContext'
+import { Icon } from '../components/Icons'
 
 interface LoadingProps {
   go: (r: AppRoute) => void
@@ -62,10 +63,11 @@ const Loaf = () => (
 )
 
 export function Loading({ go, nextRoute = 'dashboard', minDelay = 2000 }: LoadingProps) {
-  const { generationLoading } = useStore()
+  const { generationLoading, generationError, generatePlanAsync, onboardingState, viewSamplePlan } = useStore()
   const [quoteIdx, setQuoteIdx] = useState(() => Math.floor(Math.random() * COOKING_QUOTES.length))
   const [iconIdx, setIconIdx] = useState(0)
   const [minDelayDone, setMinDelayDone] = useState(false)
+  const [retryCount, setRetryCount] = useState(0)
 
   // Cycle the visual animation independently of navigation logic
   useEffect(() => {
@@ -74,18 +76,61 @@ export function Loading({ go, nextRoute = 'dashboard', minDelay = 2000 }: Loadin
     return () => { clearInterval(ti); clearInterval(tq) }
   }, [])
 
-  // Enforce a minimum display time so the loading screen doesn't flash by
+  // Enforce a minimum display time; resets on each retry attempt
   useEffect(() => {
+    setMinDelayDone(false)
     const t = setTimeout(() => setMinDelayDone(true), minDelay)
     return () => clearTimeout(t)
-  }, [minDelay])
+  }, [minDelay, retryCount])
 
-  // Navigate once generation is complete AND the minimum delay has passed
+  // Navigate once generation is complete, min delay passed, and no error
   useEffect(() => {
-    if (!generationLoading && minDelayDone) {
+    if (!generationLoading && minDelayDone && !generationError) {
       go(nextRoute)
     }
-  }, [generationLoading, minDelayDone, go, nextRoute])
+  }, [generationLoading, minDelayDone, generationError, go, nextRoute])
+
+  const handleRetry = () => {
+    if (!onboardingState) return
+    setRetryCount((c) => c + 1)
+    generatePlanAsync(onboardingState)
+  }
+
+  const handleViewSample = () => {
+    viewSamplePlan()
+    go('dashboard')
+  }
+
+  // Error state: generation finished with an error — show recovery options
+  if (!generationLoading && minDelayDone && generationError) {
+    return (
+      <div className="loading-screen">
+        <div style={{ maxWidth: 420, textAlign: 'center' }}>
+          <div style={{
+            width: 56, height: 56, borderRadius: '50%',
+            background: 'var(--bg-warm)', display: 'flex', alignItems: 'center',
+            justifyContent: 'center', margin: '0 auto 20px',
+          }}>
+            <Icon.Sparkle size={22} />
+          </div>
+          <h2 className="h-2" style={{ marginBottom: 10 }}>AI generation hit a snag</h2>
+          <p className="muted" style={{ fontSize: 14, lineHeight: 1.6, marginBottom: 28 }}>
+            {generationError}
+          </p>
+          <div className="col gap-3" style={{ alignItems: 'center' }}>
+            {onboardingState && (
+              <button className="btn btn-accent" onClick={handleRetry}>
+                <Icon.Sparkle /> Try again
+              </button>
+            )}
+            <button className="btn btn-ghost" onClick={handleViewSample}>
+              View sample plan
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="loading-screen">

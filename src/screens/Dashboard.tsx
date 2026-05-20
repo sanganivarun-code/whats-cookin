@@ -130,7 +130,7 @@ function CalendarView({ go }: { go: (r: AppRoute) => void }) {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export function Dashboard({ go }: DashboardProps) {
-  const { signedIn, setAuthOpen, planSaved, favorites, profile, generatedPlan, getMeal, generationError, savePlanToCloud } = useStore()
+  const { signedIn, setAuthOpen, planSaved, favorites, profile, generatedPlan, getMeal, savePlanToCloud, planSource } = useStore()
   const activePlan = generatedPlan ?? PLAN
 
   const avgKcal = Math.round(
@@ -144,7 +144,28 @@ export function Dashboard({ go }: DashboardProps) {
 
   return (
     <div className="page">
-      {!signedIn ? (
+      {planSource === 'sample' && !signedIn ? (
+        <div className="save-banner">
+          <div className="left">
+            <Icon.Sparkle />
+            <span>This is a <strong>sample plan.</strong> Sign in to generate your personalised AI plan.</span>
+          </div>
+          <div className="row gap-2">
+            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--bg)', borderColor: 'rgba(250,246,239,0.3)' }} onClick={() => setAuthOpen(true)}>
+              Create account
+            </button>
+            <button className="btn btn-accent btn-sm" onClick={() => setAuthOpen(true)}>Sign in</button>
+          </div>
+        </div>
+      ) : planSource === 'sample' && signedIn ? (
+        <div className="save-banner">
+          <div className="left">
+            <Icon.Sparkle />
+            <span>This is a <strong>sample plan.</strong> Go back to onboarding to generate your AI plan.</span>
+          </div>
+          <button className="btn btn-accent btn-sm" onClick={() => go('onboarding')}>Generate AI plan</button>
+        </div>
+      ) : !signedIn ? (
         <div className="save-banner">
           <div className="left">
             <Icon.Lock />
@@ -172,10 +193,15 @@ export function Dashboard({ go }: DashboardProps) {
         </div>
       ) : null}
 
-      {generationError && (
-        <div style={{ background: 'var(--bg-warm)', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 13, color: 'var(--ink-soft)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Icon.Sparkle size={13} />
-          {generationError}
+      {/* Plan source badge */}
+      {planSource === 'gemini' && (
+        <div className="row gap-2 mb-3">
+          <span className="chip chip-saffron" style={{ fontSize: 11 }}><Icon.Sparkle size={10} /> AI Plan</span>
+        </div>
+      )}
+      {planSource === 'sample' && (
+        <div className="row gap-2 mb-3">
+          <span className="chip" style={{ fontSize: 11 }}>Sample Plan</span>
         </div>
       )}
 

@@ -12,7 +12,6 @@ import {
 } from '../lib/firestoreSync'
 import type { PlanSource } from '../lib/firestoreSync'
 import { callGenerateMealPlan } from '../lib/geminiClient'
-import { generatePlan } from '../utils/generatePlan'
 import { MEALS } from '../data/meals'
 
 const StoreContext = createContext<StoreState | null>(null)
@@ -56,7 +55,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [generationError, setGenerationError] = useState<string | null>(null)
 
   // Runtime data populated by a successful Gemini generation.
-  // Empty for local-generator plans, which fall back to static MEALS / RECIPE.
+  // Empty for sample/local-dev-fallback plans, which fall back to static MEALS / RECIPE.
   const [runtimeMeals,   setRuntimeMeals]   = useState<Record<string, Meal>>({})
   const [runtimeRecipes, setRuntimeRecipes] = useState<Record<string, Recipe>>({})
   const [runtimeGrocery, setRuntimeGrocery] = useState<Array<{ section: string; name: string; qty: string }>>([])
@@ -236,7 +235,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (!uid) return
     saveExtendedPlan(firebaseServices.db, uid, {
       plan:           generatedPlanRef.current,
-      source:         planSource ?? 'local-generator',
+      source:         planSource ?? 'local-dev-fallback',
       runtimeMeals:   planSource === 'gemini' ? runtimeMeals   : undefined,
       runtimeRecipes: planSource === 'gemini' ? runtimeRecipes : undefined,
       runtimeGrocery: planSource === 'gemini' ? runtimeGrocery : undefined,
@@ -245,9 +244,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       .catch(err => console.error('Save plan error', err))
   }
 
-  // Starts async plan generation. Fire-and-forget from callers (Onboarding).
-  // Drives generationLoading / generationError / generatedPlan state so the
-  // Loading screen knows when generation is done.
+  // Starts async Gemini plan generation. Callers (Onboarding) must gate on auth
+  // before calling. On Gemini failure, sets generationError and stops — does NOT
+  // fall back to the local generator. The Loading screen handles retry/sample.
   const generatePlanAsync = (state: OnboardingState): void => {
     setGenerationLoading(true)
     setGenerationError(null)
@@ -268,26 +267,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           } catch (err: unknown) {
             const code = (err as { code?: string }).code ?? ''
             const msg = code === 'functions/resource-exhausted'
-              ? 'Daily AI generation limit reached. Your plan was generated locally instead.'
-              : 'AI generation was unavailable. Your plan was generated locally instead.'
+              ? "You've reached your daily AI generation limit. Try again tomorrow, or view the sample plan."
+              : 'AI generation is currently unavailable. Please try again or view the sample plan.'
             setGenerationError(msg)
-            // Fall through to local generation below
+            // Stop here — Loading screen offers retry or sample plan.
+            return
           }
         }
 
-        // Local generation: signed-out users, or Gemini failed
-        const localPlan = generatePlan(state)
-        setGeneratedPlanState(localPlan)
-        generatedPlanRef.current = localPlan
-        setRuntimeMeals({})
-        setRuntimeRecipes({})
-        setRuntimeGrocery([])
-        setPlanSource('local-generator')
+        // Signed-out guard (Onboarding gates on auth, but handled defensively).
+        // Do not call the local generator — switch to sample mode.
+        setPlanSource('sample')
         setPlanSaved(false)
       } finally {
         setGenerationLoading(false)
       }
     })()
+  }
+
+  // Switches to sample-plan mode. Called from the Loading error screen.
+  // generatedPlan is left as-is (null after a failed attempt); Dashboard falls
+  // back to the static PLAN constant when generatedPlan is null.
+  const viewSamplePlan = (): void => {
+    setGenerationError(null)
+    setPlanSource('sample')
   }
 
   // ─── Grocery helpers ──────────────────────────────────────────────────────
@@ -358,7 +361,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     generatedPlan, setGeneratedPlan,
     planSource, generationLoading, generationError,
     runtimeMeals, runtimeRecipes, runtimeGrocery,
-    getMeal, generatePlanAsync, savePlanToCloud,
+    getMeal, generatePlanAsync, viewSamplePlan, savePlanToCloud,
   }
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
