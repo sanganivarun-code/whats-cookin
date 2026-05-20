@@ -63,7 +63,7 @@ export function TopNav({ route, go }: TopNavProps) {
           </button>
         )}
 
-        {showOnApp && !authLoading && signedIn && (
+        {!authLoading && signedIn && route !== 'onboarding' && (
           <div style={{ position: 'relative' }}>
             <button className="nav-user" onClick={() => setUserMenu((v) => !v)}>
               <span>{user.name}</span>
