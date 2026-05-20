@@ -64,6 +64,7 @@ export interface AppUser {
 export interface StoreState {
   // Auth
   signedIn: boolean
+  authLoading: boolean  // true until onAuthStateChanged fires for the first time
   user: AppUser
   authOpen: boolean
   setAuthOpen: (open: boolean) => void

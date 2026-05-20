@@ -17,7 +17,7 @@ const NAV_LINKS: { id: AppRoute; label: string; icon: React.ReactNode }[] = [
 ]
 
 export function TopNav({ route, go }: TopNavProps) {
-  const { signedIn, signOut, user, setAuthOpen, favorites } = useStore()
+  const { signedIn, authLoading, signOut, user, setAuthOpen, favorites } = useStore()
   const [userMenu, setUserMenu] = useState(false)
 
   const showOnApp = route !== 'landing' && route !== 'onboarding'
@@ -48,7 +48,7 @@ export function TopNav({ route, go }: TopNavProps) {
 
         {route === 'landing' && (
           <>
-            {!signedIn && (
+            {!authLoading && !signedIn && (
               <button className="nav-link" onClick={() => setAuthOpen(true)}>Sign in</button>
             )}
             <button className="btn btn-primary btn-sm" onClick={() => go('onboarding')}>
@@ -57,13 +57,13 @@ export function TopNav({ route, go }: TopNavProps) {
           </>
         )}
 
-        {showOnApp && !signedIn && (
+        {showOnApp && !authLoading && !signedIn && (
           <button className="btn btn-ghost btn-sm" onClick={() => setAuthOpen(true)}>
             <Icon.Lock /> Sign in to save
           </button>
         )}
 
-        {showOnApp && signedIn && (
+        {showOnApp && !authLoading && signedIn && (
           <div style={{ position: 'relative' }}>
             <button className="nav-user" onClick={() => setUserMenu((v) => !v)}>
               <span>{user.name}</span>

@@ -24,6 +24,9 @@ export function useStore(): StoreState {
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [signedIn, setSignedIn] = useState(false)
+  // True until onAuthStateChanged fires for the first time. Prevents the sign-in
+  // button from flashing before Firebase confirms the user's session.
+  const [authLoading, setAuthLoading] = useState(!!firebaseServices)
   const [user, setUser] = useState<AppUser>({
     name:    'Aanya Sharma',
     initial: 'A',
@@ -98,6 +101,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!fbUser) {
         setSignedIn(false)
         setPlanSaved(false)
+        setAuthLoading(false)
         return
       }
 
@@ -141,6 +145,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           setAuthOpen(false)
         } catch (err) {
           console.error('Auth state sync error', err)
+        } finally {
+          setAuthLoading(false)
         }
       })()
     })
@@ -345,7 +351,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }
 
   const value: StoreState = {
-    signedIn, signIn, signOut, user,
+    signedIn, authLoading, signIn, signOut, user,
     favorites, toggleFavorite,
     overrides, setOverride, getOverride,
     authOpen, setAuthOpen,
