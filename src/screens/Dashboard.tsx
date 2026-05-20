@@ -150,12 +150,7 @@ export function Dashboard({ go }: DashboardProps) {
             <Icon.Sparkle />
             <span>This is a <strong>sample plan.</strong> Sign in to generate your personalised AI plan.</span>
           </div>
-          <div className="row gap-2">
-            <button className="btn btn-ghost btn-sm" style={{ color: 'var(--bg)', borderColor: 'rgba(250,246,239,0.3)' }} onClick={() => setAuthOpen(true)}>
-              Create account
-            </button>
-            <button className="btn btn-accent btn-sm" onClick={() => setAuthOpen(true)}>Sign in</button>
-          </div>
+          <button className="btn btn-accent btn-sm" onClick={() => setAuthOpen(true)}>Sign in</button>
         </div>
       ) : planSource === 'sample' && signedIn ? (
         <div className="save-banner">
