@@ -1,4 +1,4 @@
-import type { MealSlot } from './meal'
+import type { MealSlot, MealPlan } from './meal'
 import type {
   GroceryTagMap,
   PantryMap,
@@ -115,4 +115,8 @@ export interface StoreState {
   // Recipe navigation: meal ID of the card the user tapped to open the recipe
   recipeTarget: string | null
   setRecipeTarget: (id: string | null) => void
+
+  // Generated plan: set on onboarding completion; replaces the static PLAN fallback
+  generatedPlan: MealPlan | null
+  setGeneratedPlan: (plan: MealPlan) => void
 }

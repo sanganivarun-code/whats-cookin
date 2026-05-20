@@ -2,7 +2,7 @@ import { createContext, useContext, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { StoreState, Override, OverrideMap, AppUser, EditTarget } from '../types/store'
 import type { GroceryTagMap, PantryMap, GroceryEditMap, GroceryAdditionsMap, GroceryEdit } from '../types/grocery'
-import type { MealSlot } from '../types/meal'
+import type { MealSlot, MealPlan } from '../types/meal'
 import type { OnboardingState, UserProfile } from '../types/profile'
 
 const StoreContext = createContext<StoreState | null>(null)
@@ -31,6 +31,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [onboardingState, setOnboardingState] = useState<OnboardingState | null>(null)
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [recipeTarget, setRecipeTarget] = useState<string | null>(null)
+  const [generatedPlan, setGeneratedPlan] = useState<MealPlan | null>(null)
 
   const [groceryTags, setGroceryTags] = useState<GroceryTagMap>({
     'Paneer':                    'Indian Grocery',
@@ -152,6 +153,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     onboardingState, setOnboardingState,
     profile, setProfile,
     recipeTarget, setRecipeTarget,
+    generatedPlan, setGeneratedPlan,
   }
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

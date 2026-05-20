@@ -12,13 +12,14 @@ interface DashboardProps {
 // ─── Calendar view ────────────────────────────────────────────────────────────
 
 function CalendarView({ go }: { go: (r: AppRoute) => void }) {
-  const { favorites, toggleFavorite, getOverride, setEditTarget, setRecipeTarget } = useStore()
+  const { favorites, toggleFavorite, getOverride, setEditTarget, setRecipeTarget, generatedPlan } = useStore()
+  const activePlan = generatedPlan ?? PLAN
 
   return (
     <div className="week-grid">
       {DAYS.map((day, i) => {
         const isToday = i === TODAY_INDEX
-        const planDay = PLAN[i]
+        const planDay = activePlan[i]
         let dayKcal = 0
         let dayP = 0
 
@@ -129,14 +130,15 @@ function CalendarView({ go }: { go: (r: AppRoute) => void }) {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export function Dashboard({ go }: DashboardProps) {
-  const { signedIn, setAuthOpen, planSaved, favorites, profile } = useStore()
+  const { signedIn, setAuthOpen, planSaved, favorites, profile, generatedPlan } = useStore()
+  const activePlan = generatedPlan ?? PLAN
 
   const avgKcal = Math.round(
-    PLAN.reduce((s, day) =>
+    activePlan.reduce((s, day) =>
       s + MEAL_SLOT_LIST.reduce((acc, slot) => acc + (MEALS[day[slot.key]]?.kcal ?? 0), 0), 0) / 7
   )
   const avgP = Math.round(
-    PLAN.reduce((s, day) =>
+    activePlan.reduce((s, day) =>
       s + MEAL_SLOT_LIST.reduce((acc, slot) => acc + (MEALS[day[slot.key]]?.p ?? 0), 0), 0) / 7
   )
 

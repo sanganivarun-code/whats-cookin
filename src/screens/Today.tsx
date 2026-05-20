@@ -21,12 +21,13 @@ interface TodayEntry {
 }
 
 export function Today({ go }: TodayProps) {
-  const { favorites, toggleFavorite, getOverride, setEditTarget, setRecipeTarget, profile, user } = useStore()
+  const { favorites, toggleFavorite, getOverride, setEditTarget, setRecipeTarget, profile, user, generatedPlan } = useStore()
   const [cooked, setCooked] = useState<Record<string, boolean>>({})
 
   const dayIndex = TODAY_INDEX
   const day = DAYS[dayIndex]
-  const planDay = PLAN[dayIndex]
+  const activePlan = generatedPlan ?? PLAN
+  const planDay = activePlan[dayIndex]
 
   const hour = new Date().getHours()
   const greeting = hour < 11 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'

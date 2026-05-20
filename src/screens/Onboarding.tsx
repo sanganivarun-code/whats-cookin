@@ -6,6 +6,7 @@ import { Icon, FoodGlyph } from '../components/Icons'
 import { useStore } from '../context/StoreContext'
 import { buildProfile } from '../utils/profile'
 import { batchPreview } from '../utils/mealPlan'
+import { generatePlan } from '../utils/generatePlan'
 
 interface OnboardingProps {
   go: (r: AppRoute) => void
@@ -277,7 +278,7 @@ function StepKitchen({ s, set }: StepKitchenProps) {
 // ─── Multi-step shell ─────────────────────────────────────────────────────────
 
 function MultiStep({ go }: { go: (r: AppRoute) => void }) {
-  const { onboardingState, setOnboardingState, setProfile } = useStore()
+  const { onboardingState, setOnboardingState, setProfile, setGeneratedPlan } = useStore()
 
   const [step, setStep] = useState(0)
   // Seed form from previously saved state when re-entering the flow
@@ -304,6 +305,7 @@ function MultiStep({ go }: { go: (r: AppRoute) => void }) {
     }
     setOnboardingState(canonical)
     setProfile(buildProfile(canonical))
+    setGeneratedPlan(generatePlan(canonical))
     go('loading')
   }
 
