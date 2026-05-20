@@ -455,7 +455,7 @@ export function Grocery({ go }: GroceryProps) {
             sections.map((section) => (
               <div key={section.section} className="grocery-section">
                 <h3 className="h-2">
-                  {section.section}
+                  {section.section.replace(/\b\w/g, (c) => c.toUpperCase())}
                   <span className="gh-count">{section.items.length} items</span>
                 </h3>
                 <div className="muted mb-4" style={{ fontSize: 13 }}>
