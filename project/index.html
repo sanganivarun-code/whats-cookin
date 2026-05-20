@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>What's Cookin'?</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300..900;1,8..60,300..900&family=DM+Sans:opsz,wght@9..40,300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="src/styles.css" />
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<template id="__bundler_thumbnail" data-bg-color="#faf6ef">
+  <svg viewBox="0 0 1200 900" xmlns="http://www.w3.org/2000/svg">
+    <style>
+      @keyframes icFade {
+        0%, 18% { opacity: 1; }
+        25%, 100% { opacity: 0; }
+      }
+      @keyframes quoteFade {
+        0%, 17% { opacity: 1; }
+        25%, 100% { opacity: 0; }
+      }
+      @keyframes blink {
+        0%, 100% { opacity: 0.25; }
+        50% { opacity: 1; }
+      }
+      @keyframes ringSpin {
+        to { transform: rotate(360deg); }
+      }
+      .icon { animation: icFade 8s linear infinite; opacity: 0; }
+      .icon.i2 { animation-delay: 2s; }
+      .icon.i3 { animation-delay: 4s; }
+      .icon.i4 { animation-delay: 6s; }
+      .quote { animation: quoteFade 12s linear infinite; opacity: 0; }
+      .quote.q2 { animation-delay: 3s; }
+      .quote.q3 { animation-delay: 6s; }
+      .quote.q4 { animation-delay: 9s; }
+      .dot { animation: blink 1.4s ease-in-out infinite; }
+      .dot.d2 { animation-delay: 0.2s; }
+      .dot.d3 { animation-delay: 0.4s; }
+      .ring {
+        animation: ringSpin 4s linear infinite;
+        transform-origin: 600px 380px;
+        transform-box: view-box;
+      }
+    </style>
+
+    <circle cx="600" cy="380" r="210" fill="#b84a26" opacity="0.07" />
+    <circle class="ring" cx="600" cy="380" r="195" fill="none" stroke="#b84a26" stroke-width="4" stroke-dasharray="80 200" stroke-linecap="round" opacity="0.45" />
+    <circle cx="600" cy="380" r="150" fill="#b84a26" />
+
+    <g transform="translate(600 380)" fill="none" stroke="#faf6ef" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+      <g class="icon i1">
+        <ellipse cx="0" cy="-15" rx="50" ry="40" />
+        <rect x="-44" y="22" width="88" height="32" rx="6" />
+      </g>
+      <g class="icon i2">
+        <line x1="-65" y1="-25" x2="65" y2="-25" />
+        <path d="M-50 -25 L-50 35 Q-50 55 -28 55 L28 55 Q50 55 50 35 L50 -25" />
+        <line x1="-75" y1="-15" x2="-55" y2="-15" />
+        <line x1="55" y1="-15" x2="75" y2="-15" />
+      </g>
+      <g class="icon i3">
+        <path d="M-55 5 Q-55 50 0 50 Q55 50 55 5 Z" />
+        <line x1="-55" y1="5" x2="55" y2="5" />
+        <path d="M-22 -42 Q-12 -27 -22 -12" />
+        <path d="M3 -55 Q13 -40 3 -25" />
+        <path d="M26 -45 Q36 -30 26 -15" />
+      </g>
+      <g class="icon i4">
+        <path d="M-55 25 Q-55 -25 0 -30 Q55 -25 55 25 Z" />
+        <line x1="-32" y1="-12" x2="-18" y2="-24" stroke-width="5" />
+        <line x1="-12" y1="-16" x2="2" y2="-28" stroke-width="5" />
+        <line x1="8" y1="-12" x2="22" y2="-24" stroke-width="5" />
+        <line x1="28" y1="-8" x2="40" y2="-20" stroke-width="5" />
+      </g>
+    </g>
+
+    <text x="600" y="660" text-anchor="middle" font-family="Georgia, 'Source Serif 4', serif" font-size="68" font-weight="500" fill="#2a1f14">
+      What's <tspan font-style="italic" fill="#b84a26">Cookin'?</tspan>
+    </text>
+
+    <g font-family="Georgia, 'Source Serif 4', serif" font-style="italic" font-size="30" fill="#5a4a35" text-anchor="middle">
+      <text x="600" y="730" class="quote q1">Whisking together a plan…</text>
+      <text x="600" y="730" class="quote q2">Letting it simmer…</text>
+      <text x="600" y="730" class="quote q3">Plating up your week…</text>
+      <text x="600" y="730" class="quote q4">Marinating your preferences…</text>
+    </g>
+
+    <g transform="translate(600 790)" fill="#b84a26">
+      <circle class="dot d1" cx="-22" cy="0" r="5" />
+      <circle class="dot d2" cx="0" cy="0" r="5" />
+      <circle class="dot d3" cx="22" cy="0" r="5" />
+    </g>
+  </svg>
+</template>
+
+<div id="root"></div>
+
+<script type="text/babel" src="src/data.jsx"></script>
+<script type="text/babel" src="src/icons.jsx"></script>
+<script type="text/babel" src="src/store.jsx"></script>
+<script type="text/babel" src="src/shared.jsx"></script>
+<script type="text/babel" src="src/screens/auth.jsx"></script>
+<script type="text/babel" src="src/screens/landing.jsx"></script>
+<script type="text/babel" src="src/screens/onboarding.jsx"></script>
+<script type="text/babel" src="src/screens/loading.jsx"></script>
+<script type="text/babel" src="src/screens/dashboard.jsx"></script>
+<script type="text/babel" src="src/screens/today.jsx"></script>
+<script type="text/babel" src="src/screens/recipe.jsx"></script>
+<script type="text/babel" src="src/screens/grocery.jsx"></script>
+<script type="text/babel" src="src/screens/nutrition.jsx"></script>
+<script type="text/babel" src="src/app.jsx"></script>
+</body>
+</html>
