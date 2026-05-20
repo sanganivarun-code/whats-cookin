@@ -291,12 +291,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     })()
   }
 
-  // Switches to sample-plan mode. Called from the Loading error screen.
-  // generatedPlan is left as-is (null after a failed attempt); Dashboard falls
-  // back to the static PLAN constant when generatedPlan is null.
+  // Switches to sample-plan mode. Clears any loaded plan and runtime data so
+  // Dashboard always falls back to the fixed static PLAN + MEALS constants.
   const viewSamplePlan = (): void => {
     setGenerationError(null)
     setPlanSource('sample')
+    setGeneratedPlanState(null)
+    generatedPlanRef.current = null
+    setRuntimeMeals({})
+    setRuntimeRecipes({})
+    setRuntimeGrocery([])
+    setPlanSaved(false)
   }
 
   // ─── Grocery helpers ──────────────────────────────────────────────────────

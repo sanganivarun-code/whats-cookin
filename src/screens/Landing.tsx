@@ -7,7 +7,7 @@ interface LandingProps {
 }
 
 export function Landing({ go }: LandingProps) {
-  const { signedIn, authLoading, generatedPlan } = useStore()
+  const { signedIn, authLoading, generatedPlan, viewSamplePlan } = useStore()
   const hasExistingPlan = !authLoading && signedIn && generatedPlan !== null
 
   return (
@@ -37,7 +37,7 @@ export function Landing({ go }: LandingProps) {
                 <button className="btn btn-accent btn-lg" onClick={() => go('onboarding')}>
                   Plan my week <Icon.Arrow />
                 </button>
-                <button className="btn btn-ghost btn-lg" onClick={() => go('dashboard')}>
+                <button className="btn btn-ghost btn-lg" onClick={() => { viewSamplePlan(); go('dashboard') }}>
                   See a sample plan
                 </button>
               </>
