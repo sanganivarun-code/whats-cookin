@@ -1,4 +1,17 @@
 import { useState } from 'react'
+
+function formatIngredientName(name: string): string {
+  const parts = name.split(',').map((p) => p.trim())
+  const tc = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase())
+  if (parts.length === 1) return tc(parts[0])
+  if (parts.length === 2) return `${tc(parts[0])} - ${tc(parts[1])}`
+  // "Tomatoes, Cherry, Halved" → "Cherry Tomatoes - Halved"
+  const [base, modifier, ...prepParts] = parts
+  const prep = prepParts.join(' ')
+  return prep
+    ? `${tc(modifier)} ${tc(base)} - ${tc(prep)}`
+    : `${tc(modifier)} ${tc(base)}`
+}
 import type { AppRoute } from '../types/store'
 import { useStore } from '../context/StoreContext'
 import { Icon, FoodGlyph } from '../components/Icons'
@@ -195,8 +208,8 @@ export function Recipe({ go }: RecipeProps) {
                     return (
                       <div className="ingredient-row" key={idx}>
                         <span>
-                          {ing.name.replace(/\b\w/g, (c) => c.toUpperCase())}
-                          {sub && <span className="renamed-note">({sub.replacement.replace(/\b\w/g, (c) => c.toUpperCase())})</span>}
+                          {formatIngredientName(ing.name)}
+                          {sub && <span className="renamed-note">({formatIngredientName(sub.replacement)})</span>}
                         </span>
                         <span className="amt">{scaleAmt(ing.amt, ratio)}</span>
                       </div>

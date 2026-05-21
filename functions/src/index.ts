@@ -137,7 +137,8 @@ Rules you must follow exactly:
 11. Grocery items must be grouped into clearly labelled sections such as Produce, Dairy, Grains, Pantry, Protein, Spices.
 12. Grocery item names must be plain ingredient names only — no preparation methods (chopped, sliced, diced, grated, minced, etc.) and no descriptors after a comma. Write "Onion" not "Onion, finely chopped".
 13. Recipes must include: a subtitle, estimated servings, difficulty (Easy/Medium/Hard), relevant tags, full ingredient list with quantities, and clear numbered step-by-step instructions.
-14. Each ingredient must have a category field — one of: Produce, Dairy & Protein, Grains & Bread, Spices & Oils, Pantry, Other.`
+14. Each ingredient must have a category field — one of: Produce, Dairy & Protein, Grains & Bread, Spices & Oils, Pantry, Other.
+15. Ingredient names must use the format "[Full Name] - [Prep Method]" when a preparation method applies. Use a dash separator, never a comma. Examples: "Red Onion - Thinly Sliced", "Cherry Tomatoes - Halved", "Paneer - Crumbled". Plain ingredients with no prep: just the name, e.g. "Olive Oil", "Salt".`
 }
 
 // ─── Response schema ───────────────────────────────────────────────────────────
