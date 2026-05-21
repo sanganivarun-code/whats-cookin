@@ -195,8 +195,8 @@ export function Recipe({ go }: RecipeProps) {
                     return (
                       <div className="ingredient-row" key={idx}>
                         <span>
-                          {ing.name}
-                          {sub && <span className="renamed-note">({sub.replacement.toLowerCase()})</span>}
+                          {ing.name.replace(/\b\w/g, (c) => c.toUpperCase())}
+                          {sub && <span className="renamed-note">({sub.replacement.replace(/\b\w/g, (c) => c.toUpperCase())})</span>}
                         </span>
                         <span className="amt">{scaleAmt(ing.amt, ratio)}</span>
                       </div>
