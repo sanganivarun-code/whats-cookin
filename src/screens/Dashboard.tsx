@@ -208,8 +208,8 @@ export function Dashboard({ go }: DashboardProps) {
           : 'Your weekly meal plan. Dinners flow into next-day lunches where it makes sense.'}
         actions={<>
           <button className="btn btn-ghost btn-sm"><Icon.Sparkle /> Regenerate</button>
-          <button className="btn btn-primary btn-sm" onClick={() => go('grocery')}>
-            <Icon.Cart /> Grocery list
+          <button className="btn btn-primary btn-sm" onClick={() => go('onboarding')}>
+            Plan again
           </button>
         </>}
       />

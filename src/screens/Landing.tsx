@@ -29,9 +29,14 @@ export function Landing({ go }: LandingProps) {
           </p>
           <div className="row gap-3 mt-6">
             {hasExistingPlan ? (
-              <button className="btn btn-accent btn-lg" onClick={() => go('dashboard')}>
-                Your week's ready <Icon.Arrow />
-              </button>
+              <>
+                <button className="btn btn-accent btn-lg" onClick={() => go('dashboard')}>
+                  Your week's ready <Icon.Arrow />
+                </button>
+                <button className="btn btn-ghost btn-lg" onClick={() => go('onboarding')}>
+                  Start fresh
+                </button>
+              </>
             ) : (
               <>
                 <button className="btn btn-accent btn-lg" onClick={() => go('onboarding')}>
