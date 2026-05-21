@@ -14,7 +14,7 @@ function formatIngredientName(name: string): string {
 }
 import type { AppRoute } from '../types/store'
 import { useStore } from '../context/StoreContext'
-import { Icon, FoodGlyph } from '../components/Icons'
+import { Icon } from '../components/Icons'
 import { RECIPE } from '../data/recipe'
 import { scaleAmt } from '../utils/mealPlan'
 
@@ -23,7 +23,7 @@ interface RecipeProps {
 }
 
 export function Recipe({ go }: RecipeProps) {
-  const { favorites, toggleFavorite, groceryEdits, recipeTarget, setRecipeTarget, runtimeRecipes, getMeal } = useStore()
+  const { favorites, toggleFavorite, groceryEdits, recipeTarget, runtimeRecipes, getMeal } = useStore()
   const r = (recipeTarget && runtimeRecipes[recipeTarget]) ? runtimeRecipes[recipeTarget] : RECIPE
   // Use the tapped meal for favorites; fall back to the hardcoded recipe id
   const favId = recipeTarget ?? r.id
@@ -217,27 +217,6 @@ export function Recipe({ go }: RecipeProps) {
                   })}
                 </div>
               ))}
-            </div>
-          </div>
-
-          <div className="card-flat">
-            <div className="eyebrow mb-2">Pairs well with</div>
-            <div className="col gap-2 mt-2">
-              {r.pairsWith.map((id) => {
-                const m = getMeal(id)
-                if (!m) return null
-                return (
-                  <button key={id} className="row gap-3" onClick={() => { setRecipeTarget(id); go('recipe') }}
-                    style={{ padding: 10, background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--hairline)', textAlign: 'left', cursor: 'pointer', width: '100%' }}>
-                    <FoodGlyph kind={m.glyph} tone={m.tone} size="sm" />
-                    <div style={{ flex: 1 }}>
-                      <div className="serif" style={{ fontWeight: 500, fontSize: 14 }}>{m.name}</div>
-                      <div className="mono muted" style={{ fontSize: 11 }}>{m.kcal} kcal · {m.time} min</div>
-                    </div>
-                    <Icon.Arrow size={12} />
-                  </button>
-                )
-              })}
             </div>
           </div>
         </aside>
