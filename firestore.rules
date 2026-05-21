@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Meal plans — user can only read/write their own
+    match /users/{uid}/plans/{planId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Favorites — user can only read/write their own
+    match /users/{uid}/favorites/{mealId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Rate limits — written exclusively by the Cloud Function via admin SDK.
+    // No client should ever touch this directly.
+    match /users/{uid}/rateLimits/{doc} {
+      allow read, write: if false;
+    }
+
+  }
+}
