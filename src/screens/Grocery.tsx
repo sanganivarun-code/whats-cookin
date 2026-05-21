@@ -5,7 +5,7 @@ import { useStore } from '../context/StoreContext'
 import { Icon } from '../components/Icons'
 import { PageHeader } from '../components/PageHeader'
 import { GROCERY, STORES } from '../data/grocery'
-import { buildDisplaySections, buildItemsByStore, parseQty, formatNum, findStore } from '../utils/grocery'
+import { buildDisplaySections, buildItemsByStore, parseQty, formatNum, findStore, cleanGroceryName } from '../utils/grocery'
 
 interface GroceryProps {
   go: (r: AppRoute) => void
@@ -41,8 +41,8 @@ function GroceryRow({ id: _id, item, subtitle, checked, onToggle, tag, onEditTag
       </button>
       <div>
         <div className={`gname${item.custom ? ' custom' : ''}`}>
-          {item.name}
-          {item.renamed && <span className="renamed-note">was {item.originalName.toLowerCase()}</span>}
+          {cleanGroceryName(item.name)}
+          {item.renamed && <span className="renamed-note">was {cleanGroceryName(item.originalName)}</span>}
           {item.custom && <span className="renamed-note">added by you</span>}
         </div>
         {subtitle && <div className="mono muted" style={{ fontSize: 10, letterSpacing: '0.08em', marginTop: 2 }}>{subtitle}</div>}

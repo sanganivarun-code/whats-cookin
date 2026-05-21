@@ -8,6 +8,18 @@ import type {
   DisplayGrocerySection,
 } from '../types/grocery'
 
+// ─── Name cleanup ─────────────────────────────────────────────────────────────
+
+// Strips preparation descriptors after the first comma ("Onion, finely chopped"
+// → "Onion") and title-cases the result. Applied at display time only —
+// originalName in state is never modified so tag/pantry/edit maps still work.
+export function cleanGroceryName(name: string): string {
+  return name
+    .split(',')[0]
+    .trim()
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+}
+
 // ─── Quantity parsing ──────────────────────────────────────────────────────────
 
 // Unicode fractions that appear in grocery quantities
