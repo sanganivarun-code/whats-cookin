@@ -84,9 +84,15 @@ export function validateGeminiPlan(data: unknown): GeminiPlanResponse | null {
   }
 
   // ── recipes ───────────────────────────────────────────────────────────────
-  // Only require the key to exist. Individual recipe entries may be incomplete;
-  // the Recipe screen falls back to the static RECIPE when a key is absent.
+  // Every meal ID must have a recipe with a matching key. The backend converts
+  // the recipes array → Record keyed by id before returning, so we can look up
+  // directly. Rejecting here prevents the Recipe screen from silently falling
+  // back to a placeholder when Gemini gives a recipe a different id than its meal.
   if (!d['recipes'] || typeof d['recipes'] !== 'object') return null
+  const recipes = d['recipes'] as Record<string, unknown>
+  for (const id of mealIds) {
+    if (!recipes[id]) return null
+  }
 
   // ── groceryItems ──────────────────────────────────────────────────────────
   if (!Array.isArray(d['groceryItems'])) return null

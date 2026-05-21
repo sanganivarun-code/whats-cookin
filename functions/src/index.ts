@@ -299,6 +299,12 @@ function validateOutput(raw: unknown): GeminiPlanResponse | null {
     recipes[r['id'] as string] = r
   }
 
+  // Every meal ID referenced in days must have a recipe with matching ID.
+  // Rejects responses where Gemini uses a different ID for a recipe than its meal.
+  for (const id of mealIds) {
+    if (!recipes[id]) return null
+  }
+
   // Validate groceryItems exists (contents validated loosely)
   if (!Array.isArray(d['groceryItems'])) return null
 

@@ -15,7 +15,6 @@ function formatIngredientName(name: string): string {
 import type { AppRoute } from '../types/store'
 import { useStore } from '../context/StoreContext'
 import { Icon } from '../components/Icons'
-import { RECIPE } from '../data/recipe'
 import { scaleAmt } from '../utils/mealPlan'
 
 interface RecipeProps {
@@ -24,15 +23,37 @@ interface RecipeProps {
 
 export function Recipe({ go }: RecipeProps) {
   const { favorites, toggleFavorite, groceryEdits, recipeTarget, runtimeRecipes, getMeal } = useStore()
-  const r = (recipeTarget && runtimeRecipes[recipeTarget]) ? runtimeRecipes[recipeTarget] : RECIPE
-  // Use the tapped meal for favorites; fall back to the hardcoded recipe id
-  const favId = recipeTarget ?? r.id
-  const isFav = favorites.has(favId)
-  const [servings, setServings] = useState(r.servings)
+  const r = recipeTarget ? runtimeRecipes[recipeTarget] : undefined
+  const [servings, setServings] = useState(r?.servings ?? 2)
 
   const subs = Object.entries(groceryEdits)
     .filter(([orig, e]) => e?.name && e.name !== orig)
     .map(([orig, e]) => ({ original: orig, replacement: e.name as string }))
+
+  const mealName = recipeTarget ? getMeal(recipeTarget)?.name : undefined
+
+  if (!r) {
+    return (
+      <div className="page">
+        <button className="nav-link mb-4" onClick={() => go('dashboard')} style={{ paddingLeft: 0 }}>
+          <Icon.ArrowLeft size={14} /> Back to this week
+        </button>
+        <div className="page-header mb-6">
+          <div style={{ maxWidth: 700 }}>
+            {mealName && <h1 className="h-1">{mealName}</h1>}
+            <p className="lead mt-2">Full recipe details are only available for AI-generated plans.</p>
+          </div>
+          <div className="row gap-2">
+            <button className="btn btn-primary btn-sm" onClick={() => go('onboarding')}>Generate AI plan</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const favId = recipeTarget ?? r.id
+  const isFav = favorites.has(favId)
+  const ratio = servings / r.servings
 
   const ingredientSub: Record<number, { original: string; replacement: string }> = {}
   subs.forEach((s) => {
@@ -55,7 +76,6 @@ export function Recipe({ go }: RecipeProps) {
     {}
   )
 
-  const ratio = servings / r.servings
   const n = r.nutrition
   const denom = n.p * 4 + n.c * 4 + n.fat * 9
   const pPct  = denom > 0 ? Math.round((n.p   * 4 / denom) * 100) : 0
