@@ -2,14 +2,14 @@ import { useState } from 'react'
 import type { Override, AppRoute } from '../types/store'
 import { useStore } from '../context/StoreContext'
 import { Icon, FoodGlyph } from './Icons'
-import { MEALS, DAYS, PLAN } from '../data/meals'
+import { DAYS, PLAN } from '../data/meals'
 
 interface MealEditSheetProps {
   go: (r: AppRoute) => void
 }
 
 export function MealEditSheet({ go }: MealEditSheetProps) {
-  const { editTarget, setEditTarget, setOverride, getOverride, favorites } = useStore()
+  const { editTarget, setEditTarget, setOverride, getOverride, favorites, generatedPlan, getMeal } = useStore()
   const [customName, setCustomName] = useState('')
   const [showCustom, setShowCustom] = useState(false)
 
@@ -17,9 +17,10 @@ export function MealEditSheet({ go }: MealEditSheetProps) {
 
   const { dayIndex, slot } = editTarget
   const day = DAYS[dayIndex]
-  const planDay = PLAN[dayIndex]
+  const activePlan = generatedPlan ?? PLAN
+  const planDay = activePlan[dayIndex]
   const override = getOverride(dayIndex, slot)
-  const plannedMeal = (!override || override.kind === 'default') ? (MEALS[planDay[slot]] ?? null) : null
+  const plannedMeal = (!override || override.kind === 'default') ? (getMeal(planDay[slot]) ?? null) : null
   const slotLabel = { breakfast: 'Breakfast', lunch: 'Lunch', snack: 'Snack', dinner: 'Dinner' }[slot]
 
   const close = () => { setEditTarget(null); setShowCustom(false); setCustomName('') }
@@ -115,7 +116,7 @@ export function MealEditSheet({ go }: MealEditSheetProps) {
                 <div className="eyebrow mb-2">Or pick from favorites</div>
                 <div className="col gap-2">
                   {[...favorites].map((id) => {
-                    const m = MEALS[id]
+                    const m = getMeal(id)
                     if (!m) return null
                     return (
                       <button key={id} className="row gap-3"
