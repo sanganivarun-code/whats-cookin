@@ -80,12 +80,6 @@ export function Recipe({ go }: RecipeProps) {
       <div className="recipe-grid">
         {/* LEFT */}
         <div>
-          <div className="recipe-hero mb-6">
-            <div className="placeholder-stripe" />
-            <FoodGlyph kind="Cube" tone="paprika" size="lg" />
-            <span className="ph-label">drop photo — paneer bhurji, top-down</span>
-          </div>
-
           <div className="row gap-6 mb-6">
             <div>
               <div className="eyebrow mb-2">Cook time</div>
