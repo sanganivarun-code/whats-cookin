@@ -12,6 +12,7 @@ import { Dashboard } from './screens/Dashboard'
 import { Recipe } from './screens/Recipe'
 import { Grocery } from './screens/Grocery'
 import { Nutrition } from './screens/Nutrition'
+import { Favorites } from './screens/Favorites'
 import { routeLabel } from './utils/mealPlan'
 
 function Shell() {
@@ -34,6 +35,7 @@ function Shell() {
       {route === 'recipe'     && <Recipe     go={go} />}
       {route === 'grocery'    && <Grocery    go={go} />}
       {route === 'nutrition'  && <Nutrition  go={go} />}
+      {route === 'favorites'  && <Favorites  go={go} />}
       <AuthModal />
       <MealEditSheet go={go} />
     </div>

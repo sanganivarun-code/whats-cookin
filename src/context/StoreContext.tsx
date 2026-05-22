@@ -10,6 +10,7 @@ import {
   saveExtendedPlan, loadLatestExtendedPlan,
   saveFavorite, removeFavorite, loadFavorites,
 } from '../lib/firestoreSync'
+import { mergeFavorites } from '../utils/favorites'
 import type { PlanSource } from '../lib/firestoreSync'
 import { callGenerateMealPlan } from '../lib/geminiClient'
 import { MEALS } from '../data/meals'
@@ -32,9 +33,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     initial: 'A',
     email:   'aanya@cookin.test',
   })
-  const [favorites, setFavorites] = useState<Set<string>>(
-    new Set(['paneer_bhurji', 'khichdi'])
-  )
+  const [favorites, setFavoritesState] = useState<Set<string>>(new Set())
+  const favoritesRef = useRef<Set<string>>(new Set())
+
+  // Keeps favoritesRef in sync so onAuthStateChanged can read temp favorites
+  // accumulated while signed out without stale-closure issues.
+  const setFavorites = (next: Set<string>) => {
+    favoritesRef.current = next
+    setFavoritesState(next)
+  }
   const [overrides, setOverrides] = useState<OverrideMap>({})
   const [authOpen, setAuthOpen] = useState(false)
   const [planSaved, setPlanSaved] = useState(false)
@@ -101,6 +108,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!fbUser) {
         setSignedIn(false)
         setPlanSaved(false)
+        setFavorites(new Set())
         setAuthLoading(false)
         return
       }
@@ -116,9 +124,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               : Promise.resolve(null),
           ])
 
-          // Merge remote favorites into local (union — never discard local picks)
-          if (remoteFavs.size > 0) {
-            setFavorites(prev => new Set([...prev, ...remoteFavs]))
+          // Merge temp (signed-out) favorites with remote, then push local-only
+          // IDs to Firestore so they persist. Failures are logged but don't
+          // block auth flow completion.
+          const { merged, toSave } = mergeFavorites(favoritesRef.current, remoteFavs)
+          setFavorites(merged)
+          if (toSave.length > 0) {
+            Promise.all(toSave.map(id => saveFavorite(db, fbUser.uid, id)))
+              .catch(err => console.error('Favorites merge save error', err))
           }
 
           if (remoteExtended) {

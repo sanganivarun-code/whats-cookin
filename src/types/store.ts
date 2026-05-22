@@ -19,6 +19,7 @@ export type AppRoute =
   | 'recipe'
   | 'grocery'
   | 'nutrition'
+  | 'favorites'
 
 // ─── Meal overrides ───────────────────────────────────────────────────────────
 

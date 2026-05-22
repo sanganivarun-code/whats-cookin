@@ -126,6 +126,7 @@ export function routeLabel(route: string): string {
     recipe:     '05 Recipe detail',
     grocery:    '06 Grocery list',
     nutrition:  '07 Nutrition summary',
+    favorites:  '08 Favorites',
   }
   return LABELS[route] ?? route
 }

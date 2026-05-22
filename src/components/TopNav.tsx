@@ -82,7 +82,7 @@ export function TopNav({ route, go }: TopNavProps) {
                     <Icon.Bookmark size={14} /> My saved plans
                     <span className="mono muted ml-auto" style={{ fontSize: 11 }}>3</span>
                   </button>
-                  <button className="user-menu-item">
+                  <button className="user-menu-item" onClick={() => { setUserMenu(false); go('favorites') }}>
                     <Icon.Heart size={14} /> Favorite recipes
                     <span className="mono muted ml-auto" style={{ fontSize: 11 }}>{favorites.size}</span>
                   </button>
