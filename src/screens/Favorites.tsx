@@ -1,6 +1,7 @@
 import type { AppRoute } from '../types/store'
 import { useStore } from '../context/StoreContext'
 import { Icon, FoodGlyph } from '../components/Icons'
+import { groupByCuisine, sortCuisineGroups } from '../utils/favorites'
 
 interface FavoritesProps {
   go: (r: AppRoute) => void
@@ -12,6 +13,8 @@ export function Favorites({ go }: FavoritesProps) {
   const favMeals = [...favorites]
     .map(id => getMeal(id))
     .filter((m): m is NonNullable<ReturnType<typeof getMeal>> => m !== undefined)
+
+  const sortedGroups = sortCuisineGroups(groupByCuisine(favMeals))
 
   return (
     <div className="page">
@@ -30,7 +33,7 @@ export function Favorites({ go }: FavoritesProps) {
         </div>
       </div>
 
-      {favMeals.length === 0 ? (
+      {sortedGroups.length === 0 ? (
         <div style={{ paddingTop: 48, textAlign: 'center' }}>
           <div style={{ color: 'var(--hairline-strong)', marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
             <Icon.Heart size={36} />
@@ -47,20 +50,27 @@ export function Favorites({ go }: FavoritesProps) {
           </button>
         </div>
       ) : (
-        <div className="fav-grid">
-          {favMeals.map(meal => (
-            <div key={meal.id} className="meal-card" style={{ position: 'relative' }}>
-              <div className="meal-actions">
-                <button
-                  className="heart-btn on"
-                  onClick={() => toggleFavorite(meal.id)}
-                  title="Remove from favorites">
-                  <Icon.Heart filled size={12} />
-                </button>
+        <div>
+          {sortedGroups.map(([cuisine, meals]) => (
+            <div key={cuisine} className="mb-6">
+              <div className="eyebrow mb-3">{cuisine}</div>
+              <div className="fav-grid">
+                {meals.map(meal => (
+                  <div key={meal.id} className="meal-card" style={{ position: 'relative' }}>
+                    <div className="meal-actions">
+                      <button
+                        className="heart-btn on"
+                        onClick={() => toggleFavorite(meal.id)}
+                        title="Remove from favorites">
+                        <Icon.Heart filled size={12} />
+                      </button>
+                    </div>
+                    <FoodGlyph kind={meal.glyph} tone={meal.tone} size="sm" />
+                    <span className="meal-name" style={{ marginTop: 8 }}>{meal.name}</span>
+                    <span className="meal-kcal">{meal.kcal} kcal · {meal.p}g P</span>
+                  </div>
+                ))}
               </div>
-              <FoodGlyph kind={meal.glyph} tone={meal.tone} size="sm" />
-              <span className="meal-name" style={{ marginTop: 8 }}>{meal.name}</span>
-              <span className="meal-kcal">{meal.kcal} kcal · {meal.p}g P</span>
             </div>
           ))}
         </div>

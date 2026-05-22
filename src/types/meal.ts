@@ -35,6 +35,7 @@ export interface Meal {
   sugar: number
   fiber: number
   time: number  // active cook time in minutes; 0 = no cooking needed
+  cuisine?: string  // e.g. "North Indian", "South Indian", "Mediterranean"; absent → grouped as "Other"
 }
 
 // All meals keyed by ID for O(1) lookup

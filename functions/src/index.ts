@@ -51,17 +51,18 @@ interface OnboardingPayload {
 // ─── Response types ────────────────────────────────────────────────────────────
 
 interface GeminiMeal {
-  id:    string
-  name:  string
-  glyph: string
-  tone:  string
-  kcal:  number
-  p:     number
-  c:     number
-  fat:   number
-  sugar: number
-  fiber: number
-  time:  number
+  id:      string
+  name:    string
+  glyph:   string
+  tone:    string
+  kcal:    number
+  p:       number
+  c:       number
+  fat:     number
+  sugar:   number
+  fiber:   number
+  time:    number
+  cuisine?: string
 }
 
 interface GeminiRecipe {
@@ -138,7 +139,8 @@ Rules you must follow exactly:
 12. Grocery item names must be plain ingredient names only — no preparation methods (chopped, sliced, diced, grated, minced, etc.) and no descriptors after a comma. Write "Onion" not "Onion, finely chopped".
 13. Recipes must include: a subtitle, estimated servings, difficulty (Easy/Medium/Hard), relevant tags, full ingredient list with quantities, and clear numbered step-by-step instructions.
 14. Each ingredient must have a category field — one of: Produce, Dairy & Protein, Grains & Bread, Spices & Oils, Pantry, Other.
-15. Ingredient names must use the format "[Full Name] - [Prep Method]" when a preparation method applies. Use a dash separator, never a comma. Examples: "Red Onion - Thinly Sliced", "Cherry Tomatoes - Halved", "Paneer - Crumbled". Plain ingredients with no prep: just the name, e.g. "Olive Oil", "Salt".`
+15. Ingredient names must use the format "[Full Name] - [Prep Method]" when a preparation method applies. Use a dash separator, never a comma. Examples: "Red Onion - Thinly Sliced", "Cherry Tomatoes - Halved", "Paneer - Crumbled". Plain ingredients with no prep: just the name, e.g. "Olive Oil", "Salt".
+16. Each meal must include a cuisine field — a short label that best describes the dish's origin, e.g. "North Indian", "South Indian", "Mediterranean", "Japanese", "Mexican", "Other". Use "Other" only when no clear cuisine applies.`
 }
 
 // ─── Response schema ───────────────────────────────────────────────────────────
@@ -169,19 +171,20 @@ const RESPONSE_SCHEMA = {
       type: 'array',
       items: {
         type: 'object',
-        required: ['id', 'name', 'glyph', 'tone', 'kcal', 'p', 'c', 'fat', 'sugar', 'fiber', 'time'],
+        required: ['id', 'name', 'glyph', 'tone', 'kcal', 'p', 'c', 'fat', 'sugar', 'fiber', 'time', 'cuisine'],
         properties: {
-          id:    { type: 'string' },
-          name:  { type: 'string' },
-          glyph: { type: 'string', enum: ['Bowl', 'Roti', 'Glass', 'Leaf', 'Stack', 'Dome', 'Pot', 'Rice', 'Cube'] },
-          tone:  { type: 'string', enum: ['paprika', 'saffron', 'olive', 'ink'] },
-          kcal:  { type: 'number' },
-          p:     { type: 'number' },
-          c:     { type: 'number' },
-          fat:   { type: 'number' },
-          sugar: { type: 'number' },
-          fiber: { type: 'number' },
-          time:  { type: 'number' },
+          id:      { type: 'string' },
+          name:    { type: 'string' },
+          glyph:   { type: 'string', enum: ['Bowl', 'Roti', 'Glass', 'Leaf', 'Stack', 'Dome', 'Pot', 'Rice', 'Cube'] },
+          tone:    { type: 'string', enum: ['paprika', 'saffron', 'olive', 'ink'] },
+          kcal:    { type: 'number' },
+          p:       { type: 'number' },
+          c:       { type: 'number' },
+          fat:     { type: 'number' },
+          sugar:   { type: 'number' },
+          fiber:   { type: 'number' },
+          time:    { type: 'number' },
+          cuisine: { type: 'string' },
         },
       },
     },
