@@ -11,7 +11,7 @@ import {
   saveFavorite, removeFavorite, loadFavorites,
 } from '../lib/firestoreSync'
 import { mergeFavorites } from '../utils/favorites'
-import type { PlanSource } from '../lib/firestoreSync'
+import type { PlanSource, FavoriteRecord, FavoriteSource } from '../lib/firestoreSync'
 import { callGenerateMealPlan } from '../lib/geminiClient'
 import { MEALS } from '../data/meals'
 
@@ -34,6 +34,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     email:   'aanya@cookin.test',
   })
   const [favorites, setFavoritesState] = useState<Set<string>>(new Set())
+  const [favoriteRecords, setFavoriteRecords] = useState<Map<string, FavoriteRecord>>(new Map())
   const favoritesRef = useRef<Set<string>>(new Set())
 
   // Keeps favoritesRef in sync so onAuthStateChanged can read temp favorites
@@ -109,6 +110,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setSignedIn(false)
         setPlanSaved(false)
         setFavorites(new Set())
+        setFavoriteRecords(new Map())
         setAuthLoading(false)
         return
       }
@@ -124,14 +126,60 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               : Promise.resolve(null),
           ])
 
-          // Merge temp (signed-out) favorites with remote, then push local-only
-          // IDs to Firestore so they persist. Failures are logged but don't
-          // block auth flow completion.
-          const { merged, toSave } = mergeFavorites(favoritesRef.current, remoteFavs)
-          setFavorites(merged)
+          // Merge temp (signed-out) favorites with remote records, then push
+          // local-only IDs to Firestore with full snapshots. Failures are logged
+          // but don't block auth flow completion.
+          const remoteIds = new Set(remoteFavs.keys())
+          const { merged: mergedIds, toSave } = mergeFavorites(favoritesRef.current, remoteIds)
+
+          // Resolve snapshots for merged records. Temp favorites while signed-out
+          // always come from the static MEALS library (Gemini requires auth).
+          const resolveMeal = (id: string) =>
+            remoteExtended?.runtimeMeals[id] ?? MEALS[id]
+
+          const mergedRecords = new Map<string, FavoriteRecord>()
+          const toBackfill: FavoriteRecord[] = []
+
+          for (const id of mergedIds) {
+            if (remoteFavs.has(id)) {
+              const record = remoteFavs.get(id)!
+              if (!record.snapshot) {
+                const meal = resolveMeal(id)
+                if (meal) {
+                  const backfilled: FavoriteRecord = {
+                    ...record,
+                    source: id in MEALS ? 'sample' : 'gemini',
+                    snapshot: meal,
+                  }
+                  mergedRecords.set(id, backfilled)
+                  toBackfill.push(backfilled)
+                } else {
+                  mergedRecords.set(id, record)
+                }
+              } else {
+                mergedRecords.set(id, record)
+              }
+            } else {
+              // Local-only temp favorite — build a record with snapshot
+              const meal = resolveMeal(id)
+              mergedRecords.set(id, {
+                mealId: id,
+                source: id in MEALS ? 'sample' : 'unknown',
+                snapshot: meal,
+              })
+            }
+          }
+
+          setFavorites(mergedIds)
+          setFavoriteRecords(mergedRecords)
+
           if (toSave.length > 0) {
-            Promise.all(toSave.map(id => saveFavorite(db, fbUser.uid, id)))
+            Promise.all(toSave.map(id => saveFavorite(db, fbUser.uid, mergedRecords.get(id)!)))
               .catch(err => console.error('Favorites merge save error', err))
+          }
+          if (toBackfill.length > 0) {
+            Promise.all(toBackfill.map(r => saveFavorite(db, fbUser.uid, r)))
+              .catch(err => console.error('Favorites backfill error', err))
           }
 
           if (remoteExtended) {
@@ -203,9 +251,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const toggleFavorite = (mealId: string) => {
     const removing = favorites.has(mealId)
     const next = new Set(favorites)
-    if (removing) next.delete(mealId)
-    else next.add(mealId)
+    const nextRecords = new Map(favoriteRecords)
+
+    if (removing) {
+      next.delete(mealId)
+      nextRecords.delete(mealId)
+    } else {
+      next.add(mealId)
+      const meal = runtimeMeals[mealId] ?? MEALS[mealId]
+      const source: FavoriteSource =
+        mealId in MEALS        ? 'sample' :
+        mealId in runtimeMeals ? 'gemini' :
+        'unknown'
+      nextRecords.set(mealId, { mealId, source, snapshot: meal })
+    }
+
     setFavorites(next)
+    setFavoriteRecords(nextRecords)
 
     if (firebaseServices) {
       const uid = firebaseServices.auth.currentUser?.uid
@@ -213,7 +275,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (removing) {
           removeFavorite(firebaseServices.db, uid, mealId).catch(console.error)
         } else {
-          saveFavorite(firebaseServices.db, uid, mealId).catch(console.error)
+          saveFavorite(firebaseServices.db, uid, nextRecords.get(mealId)!).catch(console.error)
         }
       }
     }
@@ -370,7 +432,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value: StoreState = {
     signedIn, authLoading, signIn, signOut, user,
-    favorites, toggleFavorite,
+    favorites, favoriteRecords, toggleFavorite,
     overrides, setOverride, getOverride,
     authOpen, setAuthOpen,
     planSaved, setPlanSaved,

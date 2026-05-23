@@ -1,4 +1,5 @@
 import type { AppRoute } from '../types/store'
+import type { Meal } from '../types/meal'
 import { useStore } from '../context/StoreContext'
 import { Icon, FoodGlyph } from '../components/Icons'
 import { groupByCuisine, sortCuisineGroups } from '../utils/favorites'
@@ -8,13 +9,20 @@ interface FavoritesProps {
 }
 
 export function Favorites({ go }: FavoritesProps) {
-  const { favorites, toggleFavorite, getMeal, signedIn, setAuthOpen } = useStore()
+  const { favorites, favoriteRecords, toggleFavorite, getMeal, signedIn, setAuthOpen } = useStore()
 
-  const favMeals = [...favorites]
-    .map(id => getMeal(id))
-    .filter((m): m is NonNullable<ReturnType<typeof getMeal>> => m !== undefined)
+  // Resolve each favorited ID: prefer the stored snapshot, fall back to getMeal.
+  const resolved: Meal[] = []
+  const tombstoneIds: string[] = []
 
-  const sortedGroups = sortCuisineGroups(groupByCuisine(favMeals))
+  for (const id of favorites) {
+    const meal = favoriteRecords.get(id)?.snapshot ?? getMeal(id)
+    if (meal) resolved.push(meal)
+    else tombstoneIds.push(id)
+  }
+
+  const sortedGroups = sortCuisineGroups(groupByCuisine(resolved))
+  const isEmpty = sortedGroups.length === 0 && tombstoneIds.length === 0
 
   return (
     <div className="page">
@@ -33,7 +41,7 @@ export function Favorites({ go }: FavoritesProps) {
         </div>
       </div>
 
-      {sortedGroups.length === 0 ? (
+      {isEmpty ? (
         <div style={{ paddingTop: 48, textAlign: 'center' }}>
           <div style={{ color: 'var(--hairline-strong)', marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
             <Icon.Heart size={36} />
@@ -73,6 +81,29 @@ export function Favorites({ go }: FavoritesProps) {
               </div>
             </div>
           ))}
+
+          {tombstoneIds.length > 0 && (
+            <div className="mb-6">
+              <div className="eyebrow mb-3">Unavailable</div>
+              <div className="fav-grid">
+                {tombstoneIds.map(id => (
+                  <div key={id} className="meal-card" style={{ position: 'relative', opacity: 0.5 }}>
+                    <div className="meal-actions">
+                      <button
+                        className="heart-btn on"
+                        onClick={() => toggleFavorite(id)}
+                        title="Remove from favorites">
+                        <Icon.Heart filled size={12} />
+                      </button>
+                    </div>
+                    <FoodGlyph kind="Bowl" tone="ink" size="sm" />
+                    <span className="meal-name" style={{ marginTop: 8 }}>Meal unavailable</span>
+                    <span className="meal-kcal">No longer in your plan</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

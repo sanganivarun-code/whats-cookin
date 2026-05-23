@@ -2,7 +2,7 @@
 // No Firebase mocking is needed because planToDays / docToPlan / docToExtendedPlan
 // have zero Firestore dependency — they work on plain objects only.
 
-import { planToDays, docToPlan, docToExtendedPlan } from '../../lib/firestoreSync'
+import { planToDays, docToPlan, docToExtendedPlan, docToFavoriteRecord } from '../../lib/firestoreSync'
 import { PLAN } from '../../data/meals'
 import type { MealPlan } from '../../types/meal'
 
@@ -222,5 +222,91 @@ describe('docToExtendedPlan', () => {
     expect(result!.source).toBe('local-dev-fallback')
     expect(result!.runtimeMeals).toEqual({})
     expect(result!.runtimeGrocery).toEqual([])
+  })
+})
+
+// ─── docToFavoriteRecord ──────────────────────────────────────────────────────
+
+describe('docToFavoriteRecord', () => {
+  const validSnapshot = {
+    id: 'poha', name: 'Veg Poha', glyph: 'Rice', tone: 'saffron',
+    kcal: 380, p: 12, c: 58, fat: 11, sugar: 4, fiber: 5, time: 15,
+  }
+
+  it('falls back to docId for mealId and unknown source on null input', () => {
+    const result = docToFavoriteRecord(null, 'poha')
+    expect(result.mealId).toBe('poha')
+    expect(result.source).toBe('unknown')
+    expect(result.snapshot).toBeUndefined()
+  })
+
+  it('falls back gracefully on non-object input', () => {
+    expect(docToFavoriteRecord('bad', 'poha').source).toBe('unknown')
+    expect(docToFavoriteRecord(42, 'poha').mealId).toBe('poha')
+  })
+
+  it('reads mealId from document field when present', () => {
+    const result = docToFavoriteRecord({ mealId: 'khichdi' }, 'khichdi')
+    expect(result.mealId).toBe('khichdi')
+  })
+
+  it('uses docId as mealId when document mealId field is missing', () => {
+    const result = docToFavoriteRecord({}, 'fallback_id')
+    expect(result.mealId).toBe('fallback_id')
+  })
+
+  it('parses source gemini', () => {
+    expect(docToFavoriteRecord({ source: 'gemini' }, 'x').source).toBe('gemini')
+  })
+
+  it('parses source sample', () => {
+    expect(docToFavoriteRecord({ source: 'sample' }, 'x').source).toBe('sample')
+  })
+
+  it('falls back to unknown for unrecognised source', () => {
+    expect(docToFavoriteRecord({ source: 'custom' }, 'x').source).toBe('unknown')
+    expect(docToFavoriteRecord({ source: null }, 'x').source).toBe('unknown')
+  })
+
+  it('handles legacy documents with no source field (backward compat)', () => {
+    const legacy = { mealId: 'poha', savedAt: new Date() }
+    const result = docToFavoriteRecord(legacy, 'poha')
+    expect(result.mealId).toBe('poha')
+    expect(result.source).toBe('unknown')
+    expect(result.snapshot).toBeUndefined()
+  })
+
+  it('parses a valid snapshot and returns it', () => {
+    const result = docToFavoriteRecord({ source: 'sample', snapshot: validSnapshot }, 'poha')
+    expect(result.snapshot).not.toBeUndefined()
+    expect(result.snapshot!.name).toBe('Veg Poha')
+    expect(result.snapshot!.kcal).toBe(380)
+  })
+
+  it('includes optional cuisine field from snapshot when present', () => {
+    const snap = { ...validSnapshot, cuisine: 'North Indian' }
+    const result = docToFavoriteRecord({ source: 'sample', snapshot: snap }, 'poha')
+    expect(result.snapshot!.cuisine).toBe('North Indian')
+  })
+
+  it('omits cuisine from snapshot when absent', () => {
+    const result = docToFavoriteRecord({ source: 'sample', snapshot: validSnapshot }, 'poha')
+    expect(result.snapshot!.cuisine).toBeUndefined()
+  })
+
+  it('returns undefined snapshot when snapshot object is missing required fields', () => {
+    const badSnap = { id: 'poha', name: 'Poha' } // missing kcal, p, c, etc.
+    const result = docToFavoriteRecord({ source: 'sample', snapshot: badSnap }, 'poha')
+    expect(result.snapshot).toBeUndefined()
+  })
+
+  it('returns undefined snapshot when snapshot field is an array', () => {
+    const result = docToFavoriteRecord({ source: 'sample', snapshot: [] }, 'poha')
+    expect(result.snapshot).toBeUndefined()
+  })
+
+  it('returns undefined snapshot when snapshot field is a string', () => {
+    const result = docToFavoriteRecord({ source: 'sample', snapshot: 'not-an-object' }, 'poha')
+    expect(result.snapshot).toBeUndefined()
   })
 })

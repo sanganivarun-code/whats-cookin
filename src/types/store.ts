@@ -1,4 +1,5 @@
 import type { MealSlot, MealPlan, Meal, Recipe } from './meal'
+import type { FavoriteRecord } from '../lib/firestoreSync'
 import type {
   GroceryTagMap,
   PantryMap,
@@ -74,6 +75,7 @@ export interface StoreState {
 
   // Favorites
   favorites: Set<string>
+  favoriteRecords: Map<string, FavoriteRecord>
   toggleFavorite: (mealId: string) => void
 
   // Meal overrides (manual edits to the generated plan)

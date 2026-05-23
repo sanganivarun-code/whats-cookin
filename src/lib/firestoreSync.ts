@@ -15,7 +15,72 @@ import {
   doc, setDoc, deleteDoc,
   serverTimestamp,
 } from 'firebase/firestore'
-import type { MealPlan, DayPlan, Meal, Recipe } from '../types/meal'
+import type { MealPlan, DayPlan, Meal, Recipe, GlyphKind, ColorTone } from '../types/meal'
+
+// ─── Favorite records ──────────────────────────────────────────────────────────
+
+// Where the favorited meal came from.
+export type FavoriteSource = 'gemini' | 'sample' | 'unknown'
+
+// Stored in users/{uid}/favorites/{mealId}.
+// snapshot persists the full meal so it can be displayed after a refresh
+// even when runtimeMeals is no longer loaded.
+// Legacy documents written before this format have no source or snapshot;
+// docToFavoriteRecord handles them gracefully.
+export interface FavoriteRecord {
+  mealId: string
+  source: FavoriteSource
+  snapshot?: Meal
+}
+
+// Converts a raw Firestore document to a FavoriteRecord.
+// Never throws — falls back to { mealId: docId, source: 'unknown' } on bad data.
+export function docToFavoriteRecord(data: unknown, docId: string): FavoriteRecord {
+  if (!data || typeof data !== 'object') return { mealId: docId, source: 'unknown' }
+  const d = data as Record<string, unknown>
+
+  const mealId = typeof d['mealId'] === 'string' ? d['mealId'] : docId
+  const source: FavoriteSource =
+    d['source'] === 'gemini' ? 'gemini' :
+    d['source'] === 'sample' ? 'sample' :
+    'unknown'
+
+  let snapshot: Meal | undefined
+  const s = d['snapshot']
+  if (s && typeof s === 'object' && !Array.isArray(s)) {
+    const snap = s as Record<string, unknown>
+    if (
+      typeof snap['id']    === 'string' &&
+      typeof snap['name']  === 'string' &&
+      typeof snap['glyph'] === 'string' &&
+      typeof snap['tone']  === 'string' &&
+      typeof snap['kcal']  === 'number' &&
+      typeof snap['p']     === 'number' &&
+      typeof snap['c']     === 'number' &&
+      typeof snap['fat']   === 'number' &&
+      typeof snap['sugar'] === 'number' &&
+      typeof snap['fiber'] === 'number' &&
+      typeof snap['time']  === 'number'
+    ) {
+      snapshot = {
+        id:      snap['id']    as string,
+        name:    snap['name']  as string,
+        glyph:   snap['glyph'] as GlyphKind,
+        tone:    snap['tone']  as ColorTone,
+        kcal:    snap['kcal']  as number,
+        p:       snap['p']     as number,
+        c:       snap['c']     as number,
+        fat:     snap['fat']   as number,
+        sugar:   snap['sugar'] as number,
+        fiber:   snap['fiber'] as number,
+        time:    snap['time']  as number,
+        cuisine: typeof snap['cuisine'] === 'string' ? snap['cuisine'] : undefined,
+      }
+    }
+  }
+
+  return { mealId, source, snapshot }
+}
 
 // ─── Pure serialization (no Firebase types) ────────────────────────────────────
 
@@ -70,12 +135,15 @@ export async function loadLatestPlan(db: Firestore, uid: string): Promise<MealPl
   return docToPlan(snap.docs[0].data())
 }
 
-// Saves a single favorite. The document ID is the meal ID for O(1) lookup.
-export async function saveFavorite(db: Firestore, uid: string, mealId: string): Promise<void> {
-  await setDoc(doc(db, 'users', uid, 'favorites', mealId), {
-    mealId,
+// Saves a single favorite with its full snapshot. The document ID is the meal ID for O(1) lookup.
+export async function saveFavorite(db: Firestore, uid: string, record: FavoriteRecord): Promise<void> {
+  const payload: Record<string, unknown> = {
+    mealId:  record.mealId,
     savedAt: serverTimestamp(),
-  })
+    source:  record.source,
+  }
+  if (record.snapshot) payload['snapshot'] = record.snapshot
+  await setDoc(doc(db, 'users', uid, 'favorites', record.mealId), payload)
 }
 
 // Removes a single favorite.
@@ -83,10 +151,15 @@ export async function removeFavorite(db: Firestore, uid: string, mealId: string)
   await deleteDoc(doc(db, 'users', uid, 'favorites', mealId))
 }
 
-// Loads all favorites for a user as a Set of meal IDs.
-export async function loadFavorites(db: Firestore, uid: string): Promise<Set<string>> {
+// Loads all favorites for a user as a Map keyed by meal ID.
+// Backward-compatible: legacy documents that lack source/snapshot fields still load.
+export async function loadFavorites(db: Firestore, uid: string): Promise<Map<string, FavoriteRecord>> {
   const snap = await getDocs(collection(db, 'users', uid, 'favorites'))
-  return new Set(snap.docs.map(d => d.id))
+  const result = new Map<string, FavoriteRecord>()
+  for (const d of snap.docs) {
+    result.set(d.id, docToFavoriteRecord(d.data(), d.id))
+  }
+  return result
 }
 
 // ─── Extended plan (Gemini-generated plans with runtime meal/recipe/grocery) ───
