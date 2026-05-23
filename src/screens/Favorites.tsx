@@ -8,23 +8,30 @@ interface FavoritesProps {
   go: (r: AppRoute) => void
 }
 
+// Cuisine strings used in MEALS and the Gemini prompt (rule 16).
+const KNOWN_CUISINES = [
+  'North Indian', 'South Indian', 'Indian',
+  'Mediterranean', 'Japanese', 'Mexican', 'Chinese', 'Italian', 'Thai', 'Korean',
+]
+
 export function Favorites({ go }: FavoritesProps) {
-  const { favorites, favoriteRecords, toggleFavorite, getMeal, signedIn, setAuthOpen } = useStore()
+  const { favorites, favoriteRecords, toggleFavorite, getMeal, runtimeRecipes, signedIn, setAuthOpen } = useStore()
 
   // Resolve each favorited ID: prefer the stored snapshot for display data
-  // (it survives refresh without runtimeMeals), but patch in cuisine from
-  // getMeal when the snapshot predates the cuisine schema addition.
+  // (it survives refresh without runtimeMeals). Patch cuisine in three stages:
+  // snapshot → getMeal → recipe tags (for old Gemini plans that predate cuisine schema).
   const resolved: Meal[] = []
   const tombstoneIds: string[] = []
 
   for (const id of favorites) {
     const snapshot = favoriteRecords.get(id)?.snapshot
     const liveMeal = getMeal(id)
-    const meal = snapshot
-      ? { ...snapshot, cuisine: snapshot.cuisine ?? liveMeal?.cuisine }
-      : liveMeal
-    if (meal) resolved.push(meal)
-    else tombstoneIds.push(id)
+    const baseMeal = snapshot ?? liveMeal
+    if (!baseMeal) { tombstoneIds.push(id); continue }
+
+    const cuisineFromTags = runtimeRecipes[id]?.tags.find(t => KNOWN_CUISINES.includes(t))
+    const cuisine = baseMeal.cuisine ?? cuisineFromTags
+    resolved.push({ ...baseMeal, cuisine })
   }
 
   const sortedGroups = sortCuisineGroups(groupByCuisine(resolved))
