@@ -11,12 +11,18 @@ interface FavoritesProps {
 export function Favorites({ go }: FavoritesProps) {
   const { favorites, favoriteRecords, toggleFavorite, getMeal, signedIn, setAuthOpen } = useStore()
 
-  // Resolve each favorited ID: prefer the stored snapshot, fall back to getMeal.
+  // Resolve each favorited ID: prefer the stored snapshot for display data
+  // (it survives refresh without runtimeMeals), but patch in cuisine from
+  // getMeal when the snapshot predates the cuisine schema addition.
   const resolved: Meal[] = []
   const tombstoneIds: string[] = []
 
   for (const id of favorites) {
-    const meal = favoriteRecords.get(id)?.snapshot ?? getMeal(id)
+    const snapshot = favoriteRecords.get(id)?.snapshot
+    const liveMeal = getMeal(id)
+    const meal = snapshot
+      ? { ...snapshot, cuisine: snapshot.cuisine ?? liveMeal?.cuisine }
+      : liveMeal
     if (meal) resolved.push(meal)
     else tombstoneIds.push(id)
   }
