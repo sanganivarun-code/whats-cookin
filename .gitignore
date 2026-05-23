@@ -15,6 +15,9 @@ coverage/
 .env.local
 .env.*.local
 
+# Firebase local cache
+.firebase/
+
 # OS
 .DS_Store
 Thumbs.db
