@@ -15,7 +15,7 @@ const KNOWN_CUISINES = [
 ]
 
 export function Favorites({ go }: FavoritesProps) {
-  const { favorites, favoriteRecords, toggleFavorite, getMeal, runtimeRecipes, signedIn, setAuthOpen } = useStore()
+  const { favorites, favoriteRecords, toggleFavorite, getMeal, runtimeRecipes, signedIn, setAuthOpen, setRecipeTarget } = useStore()
 
   // Resolve each favorited ID: prefer the stored snapshot for display data
   // (it survives refresh without runtimeMeals). Patch cuisine in three stages:
@@ -77,11 +77,12 @@ export function Favorites({ go }: FavoritesProps) {
               <div className="eyebrow mb-3">{cuisine}</div>
               <div className="fav-grid">
                 {meals.map(meal => (
-                  <div key={meal.id} className="meal-card" style={{ position: 'relative' }}>
+                  <div key={meal.id} className="meal-card" style={{ position: 'relative', cursor: 'pointer' }}
+                    onClick={() => { setRecipeTarget(meal.id); go('recipe') }}>
                     <div className="meal-actions">
                       <button
                         className="heart-btn on"
-                        onClick={() => toggleFavorite(meal.id)}
+                        onClick={(e) => { e.stopPropagation(); toggleFavorite(meal.id) }}
                         title="Remove from favorites">
                         <Icon.Heart filled size={12} />
                       </button>
