@@ -141,7 +141,7 @@ export interface StoreState {
   runtimeRecipes: Record<string, Recipe>
   runtimeGrocery: Array<{ section: string; name: string; qty: string }>
 
-  // Unified meal lookup: runtimeMeals first, then static MEALS, then undefined.
+  // Unified meal lookup: runtimeMeals → static MEALS → favorited meal snapshot → undefined.
   getMeal: (id: string) => Meal | undefined
 
   // Unified recipe lookup: runtimeRecipes first, then favorited recipeSnapshot, then undefined.

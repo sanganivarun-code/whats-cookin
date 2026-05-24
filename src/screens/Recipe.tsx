@@ -41,7 +41,7 @@ export function Recipe({ go }: RecipeProps) {
         <div className="page-header mb-6">
           <div style={{ maxWidth: 700 }}>
             {mealName && <h1 className="h-1">{mealName}</h1>}
-            <p className="lead mt-2">Recipe details are unavailable for this meal. Generate an AI plan to get full recipes.</p>
+            <p className="lead mt-2">Recipe details aren't available for this meal. This can happen with older favorites saved before recipes were stored, or with sample-plan meals.</p>
           </div>
           <div className="row gap-2">
             <button className="btn btn-primary btn-sm" onClick={() => go('onboarding')}>Generate AI plan</button>

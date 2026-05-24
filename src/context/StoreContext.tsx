@@ -314,8 +314,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     generatedPlanRef.current = plan
   }
 
-  // Unified meal lookup: runtime (Gemini) meals first, then static MEALS.
-  const getMeal = (id: string): Meal | undefined => runtimeMeals[id] ?? MEALS[id]
+  // Unified meal lookup: runtime (Gemini) meals first, then static MEALS, then
+  // a favorited meal's stored snapshot (covers Gemini favorites from prior sessions).
+  const getMeal = (id: string): Meal | undefined =>
+    runtimeMeals[id] ?? MEALS[id] ?? favoriteRecords.get(id)?.snapshot
 
   // Unified recipe lookup: runtime recipes first, then a saved favorite recipeSnapshot.
   const getRecipe = (id: string): Recipe | undefined =>

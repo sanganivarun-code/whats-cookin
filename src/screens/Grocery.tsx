@@ -599,6 +599,13 @@ export function Grocery({ go }: GroceryProps) {
               <Icon.Sparkle /> Set up my pantry
             </button>
           </div>
+
+          <div className="card-flat">
+            <div className="eyebrow mb-2">Meal swaps</div>
+            <div style={{ fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.5 }}>
+              This list reflects your original plan. Meals swapped via favorites are not yet included in the grocery list.
+            </div>
+          </div>
         </aside>
       </div>
 

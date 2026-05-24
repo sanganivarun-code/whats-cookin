@@ -250,6 +250,19 @@ describe('docToExtendedPlan', () => {
     const result = docToExtendedPlan(doc)
     expect(result!.overrides).toEqual(overrides)
   })
+
+  it('preserves a custom override with mealId and name (swap-with-favorite shape)', () => {
+    const overrides = {
+      '3_dinner': { kind: 'custom', mealId: 'tikka-masala-gemini-abc', name: 'Tikka Masala' },
+    }
+    const doc = { days: planToDays(PLAN), source: 'gemini', overrides }
+    const result = docToExtendedPlan(doc)
+    expect(result!.overrides['3_dinner']).toEqual({
+      kind: 'custom',
+      mealId: 'tikka-masala-gemini-abc',
+      name: 'Tikka Masala',
+    })
+  })
 })
 
 // ─── docToFavoriteRecord ──────────────────────────────────────────────────────

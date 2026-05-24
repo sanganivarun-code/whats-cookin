@@ -3,15 +3,20 @@ import type { Override, AppRoute } from '../types/store'
 import { useStore } from '../context/StoreContext'
 import { Icon, FoodGlyph } from './Icons'
 import { DAYS, PLAN } from '../data/meals'
+import { groupByCuisine, sortCuisineGroups } from '../utils/favorites'
 
 interface MealEditSheetProps {
   go: (r: AppRoute) => void
 }
 
 export function MealEditSheet({ go }: MealEditSheetProps) {
-  const { editTarget, setEditTarget, setOverride, getOverride, favorites, generatedPlan, getMeal } = useStore()
+  const {
+    editTarget, setEditTarget, setOverride, getOverride,
+    favoriteRecords, generatedPlan, getMeal,
+  } = useStore()
   const [customName, setCustomName] = useState('')
   const [showCustom, setShowCustom] = useState(false)
+  const [showFavPicker, setShowFavPicker] = useState(false)
 
   if (!editTarget) return null
 
@@ -25,8 +30,58 @@ export function MealEditSheet({ go }: MealEditSheetProps) {
   const hasActiveOverride = override !== null && override.kind !== 'default'
   const slotLabel = { breakfast: 'Breakfast', lunch: 'Lunch', snack: 'Snack', dinner: 'Dinner' }[slot]
 
-  const close = () => { setEditTarget(null); setShowCustom(false); setCustomName('') }
+  // Favorites that have a usable meal snapshot — the only ones we can swap in.
+  const pickableFavorites = [...favoriteRecords.values()].filter(r => r.snapshot != null)
+
+  const close = () => {
+    setEditTarget(null)
+    setShowCustom(false)
+    setShowFavPicker(false)
+    setCustomName('')
+  }
   const apply = (val: Override | null) => { setOverride(dayIndex, slot, val); close() }
+
+  // ─── Favorite picker panel ─────────────────────────────────────────────────
+
+  if (showFavPicker) {
+    const grouped = sortCuisineGroups(groupByCuisine(pickableFavorites.map(r => r.snapshot!)))
+    return (
+      <div className="overlay" onClick={close}>
+        <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <button className="modal-close" onClick={close}><Icon.X /></button>
+          <button className="btn btn-ghost mb-4" style={{ paddingLeft: 0 }} onClick={() => setShowFavPicker(false)}>
+            <Icon.ArrowLeft size={14} /> Back
+          </button>
+          <div className="eyebrow mb-2">{day.name} · {slotLabel}</div>
+          <h3 className="h-2 mb-4">Pick a favorite</h3>
+          <div className="col gap-6">
+            {grouped.map(([cuisine, meals]) => (
+              <div key={cuisine}>
+                <div className="eyebrow mb-2">{cuisine}</div>
+                <div className="action-list">
+                  {meals.map((meal) => (
+                    <button
+                      key={meal.id}
+                      className="action-row"
+                      onClick={() => apply({ kind: 'custom', mealId: meal.id, name: meal.name })}>
+                      <FoodGlyph kind={meal.glyph} tone={meal.tone} size="sm" />
+                      <div className="action-text">
+                        <div className="action-title">{meal.name}</div>
+                        <div className="action-sub">{meal.kcal} kcal · {meal.p}g protein</div>
+                      </div>
+                      <Icon.Arrow size={14} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ─── Main sheet ────────────────────────────────────────────────────────────
 
   return (
     <div className="overlay" onClick={close}>
@@ -58,6 +113,18 @@ export function MealEditSheet({ go }: MealEditSheetProps) {
                 <div className="action-text">
                   <div className="action-title">View recipe</div>
                   <div className="action-sub">Ingredients, method, nutrition</div>
+                </div>
+                <Icon.Arrow size={14} />
+              </button>
+            )}
+            {pickableFavorites.length > 0 && (
+              <button className="action-row" onClick={() => setShowFavPicker(true)}>
+                <div className="action-icon"><Icon.Heart size={16} /></div>
+                <div className="action-text">
+                  <div className="action-title">Swap with favorite</div>
+                  <div className="action-sub">
+                    {pickableFavorites.length} saved meal{pickableFavorites.length !== 1 ? 's' : ''}
+                  </div>
                 </div>
                 <Icon.Arrow size={14} />
               </button>
@@ -122,29 +189,6 @@ export function MealEditSheet({ go }: MealEditSheetProps) {
                 Add to plan
               </button>
             </div>
-
-            {favorites.size > 0 && (
-              <div className="mt-6" style={{ paddingTop: 16, borderTop: '1px solid var(--hairline)' }}>
-                <div className="eyebrow mb-2">Or pick from favorites</div>
-                <div className="col gap-2">
-                  {[...favorites].map((id) => {
-                    const m = getMeal(id)
-                    if (!m) return null
-                    return (
-                      <button key={id} className="row gap-3"
-                        style={{ padding: 10, background: 'var(--surface)', borderRadius: 10, border: '1px solid var(--hairline)', textAlign: 'left', cursor: 'pointer', width: '100%' }}
-                        onClick={() => apply({ kind: 'custom', mealId: id, name: m.name })}>
-                        <FoodGlyph kind={m.glyph} tone={m.tone} size="sm" />
-                        <div style={{ flex: 1 }}>
-                          <div className="serif" style={{ fontWeight: 500, fontSize: 14 }}>{m.name}</div>
-                          <div className="mono muted" style={{ fontSize: 11 }}>{m.kcal} kcal · {m.p}g protein</div>
-                        </div>
-                      </button>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
           </div>
         )}
       </div>
