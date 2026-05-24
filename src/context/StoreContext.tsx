@@ -264,12 +264,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       nextRecords.delete(mealId)
     } else {
       next.add(mealId)
-      const meal = runtimeMeals[mealId] ?? MEALS[mealId]
+      const meal   = runtimeMeals[mealId] ?? MEALS[mealId]
+      const recipe = runtimeRecipes[mealId]
       const source: FavoriteSource =
         mealId in MEALS        ? 'sample' :
         mealId in runtimeMeals ? 'gemini' :
         'unknown'
-      nextRecords.set(mealId, { mealId, source, snapshot: meal })
+      nextRecords.set(mealId, { mealId, source, snapshot: meal, recipeSnapshot: recipe })
     }
 
     setFavorites(next)
@@ -315,6 +316,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Unified meal lookup: runtime (Gemini) meals first, then static MEALS.
   const getMeal = (id: string): Meal | undefined => runtimeMeals[id] ?? MEALS[id]
+
+  // Unified recipe lookup: runtime recipes first, then a saved favorite recipeSnapshot.
+  const getRecipe = (id: string): Recipe | undefined =>
+    runtimeRecipes[id] ?? favoriteRecords.get(id)?.recipeSnapshot
 
   // Saves the current generated plan to Firestore. Called from Dashboard.
   // No-op when Firebase is not configured or no plan exists.
@@ -469,7 +474,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     generatedPlan, setGeneratedPlan,
     planSource, generationLoading, generationError,
     runtimeMeals, runtimeRecipes, runtimeGrocery,
-    getMeal, generatePlanAsync, viewSamplePlan, savePlanToCloud,
+    getMeal, getRecipe, generatePlanAsync, viewSamplePlan, savePlanToCloud,
   }
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

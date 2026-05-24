@@ -144,6 +144,9 @@ export interface StoreState {
   // Unified meal lookup: runtimeMeals first, then static MEALS, then undefined.
   getMeal: (id: string) => Meal | undefined
 
+  // Unified recipe lookup: runtimeRecipes first, then favorited recipeSnapshot, then undefined.
+  getRecipe: (id: string) => Recipe | undefined
+
   // Starts async Gemini plan generation. Callers (Onboarding) must gate on auth
   // before calling. Fire-and-forget — drives generationLoading / generationError /
   // generatedPlan state. Does NOT fall back to the local generator on failure.

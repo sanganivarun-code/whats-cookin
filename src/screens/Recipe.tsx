@@ -22,8 +22,8 @@ interface RecipeProps {
 }
 
 export function Recipe({ go }: RecipeProps) {
-  const { favorites, toggleFavorite, groceryEdits, recipeTarget, runtimeRecipes, getMeal } = useStore()
-  const r = recipeTarget ? runtimeRecipes[recipeTarget] : undefined
+  const { favorites, toggleFavorite, groceryEdits, recipeTarget, getMeal, getRecipe } = useStore()
+  const r = recipeTarget ? getRecipe(recipeTarget) : undefined
   const [servings, setServings] = useState(r?.servings ?? 2)
 
   const subs = Object.entries(groceryEdits)
@@ -41,7 +41,7 @@ export function Recipe({ go }: RecipeProps) {
         <div className="page-header mb-6">
           <div style={{ maxWidth: 700 }}>
             {mealName && <h1 className="h-1">{mealName}</h1>}
-            <p className="lead mt-2">Full recipe details are only available for AI-generated plans.</p>
+            <p className="lead mt-2">Recipe details are unavailable for this meal. Generate an AI plan to get full recipes.</p>
           </div>
           <div className="row gap-2">
             <button className="btn btn-primary btn-sm" onClick={() => go('onboarding')}>Generate AI plan</button>

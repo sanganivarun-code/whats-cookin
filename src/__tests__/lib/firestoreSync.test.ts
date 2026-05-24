@@ -291,8 +291,12 @@ describe('docToFavoriteRecord', () => {
   })
 
   it('falls back to unknown for unrecognised source', () => {
-    expect(docToFavoriteRecord({ source: 'custom' }, 'x').source).toBe('unknown')
+    expect(docToFavoriteRecord({ source: 'other' }, 'x').source).toBe('unknown')
     expect(docToFavoriteRecord({ source: null }, 'x').source).toBe('unknown')
+  })
+
+  it('parses source custom', () => {
+    expect(docToFavoriteRecord({ source: 'custom' }, 'x').source).toBe('custom')
   })
 
   it('handles legacy documents with no source field (backward compat)', () => {
@@ -335,5 +339,50 @@ describe('docToFavoriteRecord', () => {
   it('returns undefined snapshot when snapshot field is a string', () => {
     const result = docToFavoriteRecord({ source: 'sample', snapshot: 'not-an-object' }, 'poha')
     expect(result.snapshot).toBeUndefined()
+  })
+
+  // ─── recipeSnapshot ───────────────────────────────────────────────────────────
+
+  const validRecipeSnapshot = {
+    id: 'poha', name: 'Veg Poha', subtitle: 'Quick and light.', servings: 2,
+    time: 15, difficulty: 'Easy', tags: ['Vegetarian'],
+    nutrition: { kcal: 380, p: 12, c: 58, fat: 11, sugar: 4, fiber: 5 },
+    ingredients: [{ name: 'Flattened rice', amt: '1 cup', category: 'Grains & Bread' }],
+    steps: ['Rinse and soak poha for 5 minutes.', 'Temper in oil and combine.'],
+    pairsWith: [],
+  }
+
+  it('returns undefined recipeSnapshot when field is absent (backward compat)', () => {
+    const result = docToFavoriteRecord({ source: 'gemini', snapshot: validSnapshot }, 'poha')
+    expect(result.recipeSnapshot).toBeUndefined()
+  })
+
+  it('returns undefined recipeSnapshot when field is not an object', () => {
+    expect(docToFavoriteRecord({ recipeSnapshot: 'bad' }, 'poha').recipeSnapshot).toBeUndefined()
+    expect(docToFavoriteRecord({ recipeSnapshot: [] }, 'poha').recipeSnapshot).toBeUndefined()
+    expect(docToFavoriteRecord({ recipeSnapshot: 42 }, 'poha').recipeSnapshot).toBeUndefined()
+  })
+
+  it('returns undefined recipeSnapshot when required fields are missing', () => {
+    // missing steps and ingredients
+    expect(docToFavoriteRecord({ recipeSnapshot: { id: 'poha', name: 'Poha' } }, 'poha').recipeSnapshot).toBeUndefined()
+    // missing id
+    expect(docToFavoriteRecord({ recipeSnapshot: { name: 'Poha', steps: [], ingredients: [] } }, 'poha').recipeSnapshot).toBeUndefined()
+  })
+
+  it('returns recipeSnapshot when minimally valid (id, name, steps[], ingredients[])', () => {
+    const result = docToFavoriteRecord({ recipeSnapshot: validRecipeSnapshot }, 'poha')
+    expect(result.recipeSnapshot).not.toBeUndefined()
+    expect(result.recipeSnapshot!.name).toBe('Veg Poha')
+    expect(result.recipeSnapshot!.steps).toHaveLength(2)
+  })
+
+  it('round-trips a FavoriteRecord with both snapshot and recipeSnapshot', () => {
+    const doc = { mealId: 'poha', source: 'gemini', snapshot: validSnapshot, recipeSnapshot: validRecipeSnapshot }
+    const result = docToFavoriteRecord(doc, 'poha')
+    expect(result.mealId).toBe('poha')
+    expect(result.source).toBe('gemini')
+    expect(result.snapshot!.name).toBe('Veg Poha')
+    expect(result.recipeSnapshot!.steps[0]).toBe('Rinse and soak poha for 5 minutes.')
   })
 })

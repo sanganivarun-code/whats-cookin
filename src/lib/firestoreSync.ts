@@ -29,17 +29,18 @@ interface StoredOverride {
 // ─── Favorite records ──────────────────────────────────────────────────────────
 
 // Where the favorited meal came from.
-export type FavoriteSource = 'gemini' | 'sample' | 'unknown'
+export type FavoriteSource = 'gemini' | 'sample' | 'custom' | 'unknown'
 
 // Stored in users/{uid}/favorites/{mealId}.
-// snapshot persists the full meal so it can be displayed after a refresh
-// even when runtimeMeals is no longer loaded.
-// Legacy documents written before this format have no source or snapshot;
+// snapshot persists the full meal so Favorites page survives refresh without runtimeMeals.
+// recipeSnapshot persists the full recipe so the Recipe page works without a loaded plan.
+// Legacy documents written before this format have no source, snapshot, or recipeSnapshot;
 // docToFavoriteRecord handles them gracefully.
 export interface FavoriteRecord {
   mealId: string
   source: FavoriteSource
   snapshot?: Meal
+  recipeSnapshot?: Recipe
 }
 
 // Converts a raw Firestore document to a FavoriteRecord.
@@ -52,6 +53,7 @@ export function docToFavoriteRecord(data: unknown, docId: string): FavoriteRecor
   const source: FavoriteSource =
     d['source'] === 'gemini' ? 'gemini' :
     d['source'] === 'sample' ? 'sample' :
+    d['source'] === 'custom' ? 'custom' :
     'unknown'
 
   let snapshot: Meal | undefined
@@ -88,7 +90,27 @@ export function docToFavoriteRecord(data: unknown, docId: string): FavoriteRecor
     }
   }
 
-  return { mealId, source, snapshot }
+  // Lightweight recipeSnapshot validation: trust our own Gemini data shape but
+  // guard against missing required fields so malformed docs don't crash the app.
+  let recipeSnapshot: Recipe | undefined
+  const rs = d['recipeSnapshot']
+  if (
+    rs &&
+    typeof rs === 'object' &&
+    !Array.isArray(rs)
+  ) {
+    const r = rs as Record<string, unknown>
+    if (
+      typeof r['id']          === 'string' &&
+      typeof r['name']        === 'string' &&
+      Array.isArray(r['steps']) &&
+      Array.isArray(r['ingredients'])
+    ) {
+      recipeSnapshot = rs as Recipe
+    }
+  }
+
+  return { mealId, source, snapshot, recipeSnapshot }
 }
 
 // ─── Pure serialization (no Firebase types) ────────────────────────────────────
@@ -151,7 +173,8 @@ export async function saveFavorite(db: Firestore, uid: string, record: FavoriteR
     savedAt: serverTimestamp(),
     source:  record.source,
   }
-  if (record.snapshot) payload['snapshot'] = record.snapshot
+  if (record.snapshot)       payload['snapshot']       = record.snapshot
+  if (record.recipeSnapshot) payload['recipeSnapshot'] = record.recipeSnapshot
   await setDoc(doc(db, 'users', uid, 'favorites', record.mealId), payload)
 }
 
