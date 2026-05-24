@@ -223,6 +223,33 @@ describe('docToExtendedPlan', () => {
     expect(result!.runtimeMeals).toEqual({})
     expect(result!.runtimeGrocery).toEqual([])
   })
+
+  it('defaults overrides to empty object when field is absent', () => {
+    expect(docToExtendedPlan(validBase)!.overrides).toEqual({})
+  })
+
+  it('defaults overrides to empty object when field is not a plain object', () => {
+    expect(docToExtendedPlan({ ...validBase, overrides: [] })!.overrides).toEqual({})
+    expect(docToExtendedPlan({ ...validBase, overrides: 'bad' })!.overrides).toEqual({})
+    expect(docToExtendedPlan({ ...validBase, overrides: null })!.overrides).toEqual({})
+  })
+
+  it('returns overrides unchanged when present as a plain object', () => {
+    const overrides = {
+      '2_dinner':    { kind: 'eating-out' },
+      '4_breakfast': { kind: 'self-cook', name: 'Omelette' },
+      '0_lunch':     { kind: 'removed' },
+    }
+    const result = docToExtendedPlan({ ...validBase, overrides })
+    expect(result!.overrides).toEqual(overrides)
+  })
+
+  it('round-trips overrides through planToDays → docToExtendedPlan', () => {
+    const overrides = { '1_snack': { kind: 'eating-out' } }
+    const doc = { days: planToDays(PLAN), source: 'gemini', overrides }
+    const result = docToExtendedPlan(doc)
+    expect(result!.overrides).toEqual(overrides)
+  })
 })
 
 // ─── docToFavoriteRecord ──────────────────────────────────────────────────────

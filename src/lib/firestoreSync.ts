@@ -17,6 +17,15 @@ import {
 } from 'firebase/firestore'
 import type { MealPlan, DayPlan, Meal, Recipe, GlyphKind, ColorTone } from '../types/meal'
 
+// Stored shape of a single meal override. Mirrors types/store.ts Override but
+// defined here to avoid a circular import (types/store.ts imports FavoriteRecord
+// from this file).
+interface StoredOverride {
+  kind: string
+  name?: string
+  mealId?: string
+}
+
 // ─── Favorite records ──────────────────────────────────────────────────────────
 
 // Where the favorited meal came from.
@@ -180,6 +189,7 @@ export interface LoadedExtendedPlan {
   runtimeMeals:  Record<string, Meal>
   runtimeRecipes: Record<string, Recipe>
   runtimeGrocery: Array<{ section: string; name: string; qty: string }>
+  overrides:     Record<string, StoredOverride>
 }
 
 // Pure serialization helper — converts a raw Firestore document to a
@@ -209,7 +219,12 @@ export function docToExtendedPlan(data: unknown): LoadedExtendedPlan | null {
   const runtimeGrocery: Array<{ section: string; name: string; qty: string }> =
     Array.isArray(d['runtimeGrocery']) ? d['runtimeGrocery'] as Array<{ section: string; name: string; qty: string }> : []
 
-  return { plan, source, runtimeMeals, runtimeRecipes, runtimeGrocery }
+  const overrides: Record<string, StoredOverride> =
+    d['overrides'] && typeof d['overrides'] === 'object' && !Array.isArray(d['overrides'])
+      ? (d['overrides'] as Record<string, StoredOverride>)
+      : {}
+
+  return { plan, source, runtimeMeals, runtimeRecipes, runtimeGrocery, overrides }
 }
 
 // Saves an extended plan document and returns the new document ID.
@@ -224,6 +239,7 @@ export async function saveExtendedPlan(
     runtimeMeals?:  Record<string, Meal>
     runtimeRecipes?: Record<string, Recipe>
     runtimeGrocery?: Array<{ section: string; name: string; qty: string }>
+    overrides?:     Record<string, StoredOverride>
   },
 ): Promise<string> {
   const ref = await addDoc(collection(db, 'users', uid, 'plans'), {
@@ -234,6 +250,7 @@ export async function saveExtendedPlan(
     runtimeMeals:   payload.runtimeMeals   ?? {},
     runtimeRecipes: payload.runtimeRecipes ?? {},
     runtimeGrocery: payload.runtimeGrocery ?? [],
+    overrides:      payload.overrides      ?? {},
   })
   return ref.id
 }

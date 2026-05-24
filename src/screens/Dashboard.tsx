@@ -130,7 +130,7 @@ function CalendarView({ go }: { go: (r: AppRoute) => void }) {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export function Dashboard({ go }: DashboardProps) {
-  const { signedIn, setAuthOpen, planSaved, favorites, profile, generatedPlan, getMeal, savePlanToCloud, planSource } = useStore()
+  const { signedIn, setAuthOpen, planSaved, planDirty, saveError, favorites, profile, generatedPlan, getMeal, savePlanToCloud, planSource } = useStore()
   const activePlan = generatedPlan ?? PLAN
 
   const avgKcal = Math.round(
@@ -173,6 +173,17 @@ export function Dashboard({ go }: DashboardProps) {
             <button className="btn btn-accent btn-sm" onClick={() => setAuthOpen(true)}>Sign in</button>
           </div>
         </div>
+      ) : planSaved && planDirty ? (
+        <div className="save-banner">
+          <div className="left">
+            <Icon.Sparkle />
+            <div>
+              <span>You have <strong>unsaved changes.</strong> Save to keep your edits across devices.</span>
+              {saveError && <div style={{ color: 'var(--paprika)', fontSize: 12, marginTop: 4 }}>{saveError}</div>}
+            </div>
+          </div>
+          <button className="btn btn-accent btn-sm" onClick={savePlanToCloud}>Save changes</button>
+        </div>
       ) : planSaved ? (
         <div className="row gap-2 mb-4">
           <span className="save-status"><span className="dot" /> Saved · synced 2 minutes ago</span>
@@ -182,7 +193,10 @@ export function Dashboard({ go }: DashboardProps) {
         <div className="save-banner">
           <div className="left">
             <Icon.Sparkle />
-            <span>Your plan is ready. <em>Save it</em> to sync across devices and keep it for next time.</span>
+            <div>
+              <span>Your plan is ready. <em>Save it</em> to sync across devices and keep it for next time.</span>
+              {saveError && <div style={{ color: 'var(--paprika)', fontSize: 12, marginTop: 4 }}>{saveError}</div>}
+            </div>
           </div>
           <button className="btn btn-accent btn-sm" onClick={savePlanToCloud}>Save plan</button>
         </div>

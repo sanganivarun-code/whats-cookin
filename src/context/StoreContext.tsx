@@ -46,6 +46,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [overrides, setOverrides] = useState<OverrideMap>({})
   const [authOpen, setAuthOpen] = useState(false)
   const [planSaved, setPlanSaved] = useState(false)
+  const [planDirty, setPlanDirty] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [editTarget, setEditTarget] = useState<EditTarget | null>(null)
 
   const [onboardingState, setOnboardingState] = useState<OnboardingState | null>(null)
@@ -109,6 +111,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!fbUser) {
         setSignedIn(false)
         setPlanSaved(false)
+        setPlanDirty(false)
+        setSaveError(null)
         setFavorites(new Set())
         setFavoriteRecords(new Map())
         setAuthLoading(false)
@@ -190,7 +194,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             setRuntimeRecipes(remoteExtended.runtimeRecipes)
             setRuntimeGrocery(remoteExtended.runtimeGrocery)
             setPlanSource(remoteExtended.source)
+            setOverrides(remoteExtended.overrides as OverrideMap)
             setPlanSaved(true)
+            setPlanDirty(false)
           } else {
             // No remote plan. Local plan (if any) stays in state.
             // User must click Save explicitly — no auto-push to Firestore.
@@ -291,6 +297,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       else next[key] = value
       return next
     })
+    // Sample-plan edits are session-only and never saveable; skip dirty flag.
+    if (planSource !== 'sample') setPlanDirty(true)
   }
 
   const getOverride = (dayIndex: number, slot: MealSlot): Override | null =>
@@ -320,9 +328,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       runtimeMeals:   planSource === 'gemini' ? runtimeMeals   : undefined,
       runtimeRecipes: planSource === 'gemini' ? runtimeRecipes : undefined,
       runtimeGrocery: planSource === 'gemini' ? runtimeGrocery : undefined,
+      overrides,
     })
-      .then(() => setPlanSaved(true))
-      .catch(err => console.error('Save plan error', err))
+      .then(() => {
+        setPlanSaved(true)
+        setPlanDirty(false)
+        setSaveError(null)
+      })
+      .catch(err => {
+        console.error('Save plan error', err)
+        setSaveError('Failed to save. Please try again.')
+      })
   }
 
   // Starts async Gemini plan generation. Callers (Onboarding) must gate on auth
@@ -331,6 +347,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const generatePlanAsync = (state: OnboardingState): void => {
     setGenerationLoading(true)
     setGenerationError(null)
+    setOverrides({})
+    setPlanDirty(false)
+    setSaveError(null)
 
     void (async () => {
       try {
@@ -376,7 +395,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setRuntimeMeals({})
     setRuntimeRecipes({})
     setRuntimeGrocery([])
+    setOverrides({})
     setPlanSaved(false)
+    setPlanDirty(false)
+    setSaveError(null)
   }
 
   // ─── Grocery helpers ──────────────────────────────────────────────────────
@@ -435,7 +457,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     favorites, favoriteRecords, toggleFavorite,
     overrides, setOverride, getOverride,
     authOpen, setAuthOpen,
-    planSaved, setPlanSaved,
+    planSaved, setPlanSaved, planDirty, saveError,
     editTarget, setEditTarget,
     groceryTags, setGroceryTag,
     pantryHave, setHave,

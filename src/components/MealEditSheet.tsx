@@ -21,6 +21,8 @@ export function MealEditSheet({ go }: MealEditSheetProps) {
   const planDay = activePlan[dayIndex]
   const override = getOverride(dayIndex, slot)
   const plannedMeal = (!override || override.kind === 'default') ? (getMeal(planDay[slot]) ?? null) : null
+  const originalMeal = getMeal(planDay[slot]) ?? null
+  const hasActiveOverride = override !== null && override.kind !== 'default'
   const slotLabel = { breakfast: 'Breakfast', lunch: 'Lunch', snack: 'Snack', dinner: 'Dinner' }[slot]
 
   const close = () => { setEditTarget(null); setShowCustom(false); setCustomName('') }
@@ -40,6 +42,16 @@ export function MealEditSheet({ go }: MealEditSheetProps) {
 
         {!showCustom ? (
           <div className="action-list mt-4">
+            {hasActiveOverride && originalMeal && (
+              <button className="action-row" onClick={() => apply(null)}>
+                <div className="action-icon"><Icon.ArrowLeft size={16} /></div>
+                <div className="action-text">
+                  <div className="action-title">Restore planned meal</div>
+                  <div className="action-sub">Original plan: {originalMeal.name}</div>
+                </div>
+                <Icon.Arrow size={14} />
+              </button>
+            )}
             {plannedMeal && (
               <button className="action-row" onClick={() => { close(); go('recipe') }}>
                 <FoodGlyph kind={plannedMeal.glyph} tone={plannedMeal.tone} size="sm" />

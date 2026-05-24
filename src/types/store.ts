@@ -90,6 +90,8 @@ export interface StoreState {
   // Plan persistence
   planSaved: boolean
   setPlanSaved: (saved: boolean) => void
+  planDirty: boolean   // true when overrides have changed since the last cloud save
+  saveError: string | null
 
   // Grocery: store tags
   groceryTags: GroceryTagMap
