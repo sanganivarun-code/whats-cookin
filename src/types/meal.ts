@@ -68,6 +68,52 @@ export interface RecipeIngredient {
   category?: 'Produce' | 'Dairy & Protein' | 'Grains & Bread' | 'Spices & Oils' | 'Pantry' | 'Other'
 }
 
+// ─── Unified meal domain model ─────────────────────────────────────────────────
+
+export type IngredientCategory =
+  | 'Produce'
+  | 'Dairy & Protein'
+  | 'Grains & Bread'
+  | 'Spices & Oils'
+  | 'Pantry'
+  | 'Other'
+
+// Pre-parsed ingredient with stable structured fields.
+// Replaces free-form RecipeIngredient.amt parsing at read time.
+export interface StructuredIngredient {
+  id:            string         // "ingredient_0", "ingredient_1", …
+  name:          string         // display name, prep stripped
+  canonicalName: string         // name.toLowerCase() — merge / dedup key
+  quantity:      number | null  // null for non-numeric ("a handful", "✓ check")
+  unit:          string         // canonical unit ("cup", "tbsp") or descriptor ("medium")
+  displayQty:    string         // human-readable quantity + unit
+  prep?:         string         // "finely chopped", "grated", …
+  category:      IngredientCategory
+}
+
+export type MealSource = 'gemini' | 'sample' | 'custom' | 'unknown'
+
+// Unified meal record combining Meal + Recipe into a single flat entity.
+// Adapters in src/utils/mealEntity.ts convert legacy types to this shape.
+export interface MealEntity {
+  id:          string
+  name:        string
+  cuisine:     string
+  mealType?:   MealSlot
+  source:      MealSource
+  glyph:       GlyphKind
+  tone:        ColorTone
+  servings:    number
+  time:        number
+  difficulty:  string
+  tags:        string[]
+  subtitle:    string
+  nutrition:   NutritionInfo
+  ingredients: StructuredIngredient[]
+  steps:       string[]
+  pairsWith:   string[]
+}
+
 export interface Recipe {
   id: string
   name: string
