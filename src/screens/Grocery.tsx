@@ -6,6 +6,7 @@ import { Icon } from '../components/Icons'
 import { PageHeader } from '../components/PageHeader'
 import { GROCERY, STORES } from '../data/grocery'
 import { buildDisplaySections, buildItemsByStore, parseQty, formatNum, findStore, cleanGroceryName } from '../utils/grocery'
+import { deriveGrocerySectionsFromEntities } from '../utils/derivedGrocery'
 
 interface GroceryProps {
   go: (r: AppRoute) => void
@@ -379,7 +380,8 @@ export function Grocery({ go }: GroceryProps) {
     pantryHave, setHave,
     groceryEdits, setGroceryEdit,
     groceryAdditions, addGroceryItem, removeGroceryAddition,
-    planSource, runtimeGrocery,
+    planSource, generatedPlan, overrides,
+    runtimeMealEntities, favoriteRecords, getMealEntity,
   } = useStore()
 
   const [view, setView] = useState<'section' | 'store'>('section')
@@ -391,28 +393,18 @@ export function Grocery({ go }: GroceryProps) {
 
   const toggle = (id: string) => setChecked((p) => ({ ...p, [id]: !p[id] }))
 
-  const sections = useMemo<DisplayGrocerySection[]>(() => {
-    if (planSource === 'gemini' && runtimeGrocery.length > 0) {
-      const map = new Map<string, DisplayGroceryItem[]>()
-      runtimeGrocery.forEach(({ section, name, qty }) => {
-        if (!map.has(section)) map.set(section, [])
-        map.get(section)!.push({ originalName: name, name, qty, renamed: false, quantified: false })
-      })
-      const result: DisplayGrocerySection[] = []
-      map.forEach((items, section) => {
-        const adds = groceryAdditions[section] ?? []
-        result.push({
-          section,
-          items: [
-            ...items,
-            ...adds.map(a => ({ originalName: a.name, name: a.name, qty: a.qty, renamed: false, quantified: false, custom: true as const, id: a.id })),
-          ],
-        })
-      })
-      return result
+  const { sections, skippedIds } = useMemo(() => {
+    if (planSource !== 'sample' && generatedPlan) {
+      const { sections: raw, skippedIds } = deriveGrocerySectionsFromEntities(
+        generatedPlan, overrides, getMealEntity,
+      )
+      return { sections: buildDisplaySections(raw, groceryEdits, groceryAdditions), skippedIds }
     }
-    return buildDisplaySections(GROCERY, groceryEdits, groceryAdditions)
-  }, [planSource, runtimeGrocery, groceryEdits, groceryAdditions])
+    return { sections: buildDisplaySections(GROCERY, groceryEdits, groceryAdditions), skippedIds: [] }
+    // getMealEntity reads from runtimeMealEntities + favoriteRecords + static MEALS.
+    // Listing the data atoms (not the function reference) avoids churn on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [planSource, generatedPlan, overrides, runtimeMealEntities, favoriteRecords, groceryEdits, groceryAdditions])
 
   const itemsByStore = useMemo(
     () => buildItemsByStore(sections, groceryTags),
@@ -435,6 +427,17 @@ export function Grocery({ go }: GroceryProps) {
           </button>
         </>}
       />
+
+      {skippedIds.length > 0 && (
+        <div className="info-card mb-4">
+          <Icon.Sparkle size={14} />
+          <span>
+            {skippedIds.length === 1
+              ? '1 meal in your plan doesn\'t have recipe details yet — its ingredients are not included in this list.'
+              : `${skippedIds.length} meals in your plan don\'t have recipe details yet — their ingredients are not included in this list.`}
+          </span>
+        </div>
+      )}
 
       <div className="between mb-4">
         <div className="row gap-3">
@@ -461,8 +464,11 @@ export function Grocery({ go }: GroceryProps) {
                 <div className="muted mb-4" style={{ fontSize: 13 }}>
                   {section.section === 'Produce'         && 'Pick up fresh, ideally on Sunday or Monday morning.'}
                   {section.section === 'Dairy & Protein' && 'Cold chain — split the trip if you can\'t store immediately.'}
+                  {section.section === 'Grains & Bread'  && 'Shelf-stable staples — stock up when on sale.'}
                   {section.section === 'Pantry & Grains' && 'Mostly shelf-stable. Skip what\'s already in your pantry.'}
                   {section.section === 'Spices & Oils'   && 'Quick pantry check — ticked items are likely already on hand.'}
+                  {section.section === 'Pantry'          && 'Mostly shelf-stable. Skip what\'s already in your pantry.'}
+                  {section.section === 'Other'           && 'Miscellaneous items — check before you go.'}
                 </div>
                 {section.items.map((item, i) => {
                   const id = `${section.section}-${item.originalName}-${i}`
@@ -600,12 +606,6 @@ export function Grocery({ go }: GroceryProps) {
             </button>
           </div>
 
-          <div className="card-flat">
-            <div className="eyebrow mb-2">Meal swaps</div>
-            <div style={{ fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.5 }}>
-              This list reflects your original plan. Meals swapped via favorites are not yet included in the grocery list.
-            </div>
-          </div>
         </aside>
       </div>
 
