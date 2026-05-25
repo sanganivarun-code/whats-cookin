@@ -380,8 +380,7 @@ export function Grocery({ go }: GroceryProps) {
     pantryHave, setHave,
     groceryEdits, setGroceryEdit,
     groceryAdditions, addGroceryItem, removeGroceryAddition,
-    planSource, generatedPlan, overrides,
-    runtimeMealEntities, favoriteRecords, getMealEntity,
+    planSource, generatedPlan, overrides, getMealEntity,
   } = useStore()
 
   const [view, setView] = useState<'section' | 'store'>('section')
@@ -401,10 +400,7 @@ export function Grocery({ go }: GroceryProps) {
       return { sections: buildDisplaySections(raw, groceryEdits, groceryAdditions), skippedIds }
     }
     return { sections: buildDisplaySections(GROCERY, groceryEdits, groceryAdditions), skippedIds: [] }
-    // getMealEntity reads from runtimeMealEntities + favoriteRecords + static MEALS.
-    // Listing the data atoms (not the function reference) avoids churn on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [planSource, generatedPlan, overrides, runtimeMealEntities, favoriteRecords, groceryEdits, groceryAdditions])
+  }, [planSource, generatedPlan, overrides, getMealEntity, groceryEdits, groceryAdditions])
 
   const itemsByStore = useMemo(
     () => buildItemsByStore(sections, groceryTags),

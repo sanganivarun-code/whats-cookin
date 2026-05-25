@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useRef } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import type { StoreState, Override, OverrideMap, AppUser, EditTarget } from '../types/store'
 import type { GroceryTagMap, PantryMap, GroceryEditMap, GroceryAdditionsMap, GroceryEdit } from '../types/grocery'
@@ -337,13 +337,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Unified MealEntity lookup: derived runtime entities first, then static MEALS adapted
   // as source 'sample', then a favorited record's snapshots.
-  const getMealEntity = (id: string): MealEntity | undefined => {
+  const getMealEntity = useCallback((id: string): MealEntity | undefined => {
     if (runtimeMealEntities[id]) return runtimeMealEntities[id]
     if (MEALS[id]) return adaptToMealEntity(MEALS[id], undefined, { source: 'sample' })
     const record = favoriteRecords.get(id)
     if (record) return favoriteRecordToMealEntity(record) ?? undefined
     return undefined
-  }
+  }, [runtimeMealEntities, favoriteRecords])
 
   // Saves the current generated plan to Firestore. Called from Dashboard.
   // No-op when Firebase is not configured or no plan exists.
