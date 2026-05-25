@@ -2,7 +2,7 @@ import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import type { StoreState, Override, OverrideMap, AppUser, EditTarget } from '../types/store'
 import type { GroceryTagMap, PantryMap, GroceryEditMap, GroceryAdditionsMap, GroceryEdit } from '../types/grocery'
-import type { MealSlot, MealPlan, Meal, Recipe } from '../types/meal'
+import type { MealSlot, MealPlan, Meal, Recipe, MealEntity } from '../types/meal'
 import type { OnboardingState, UserProfile } from '../types/profile'
 import { firebaseServices } from '../lib/firebase'
 import { onAuthStateChanged, signInWithPopup, signOut as fbSignOut } from 'firebase/auth'
@@ -14,6 +14,11 @@ import { mergeFavorites } from '../utils/favorites'
 import type { PlanSource, FavoriteRecord, FavoriteSource } from '../lib/firestoreSync'
 import { callGenerateMealPlan } from '../lib/geminiClient'
 import { MEALS } from '../data/meals'
+import {
+  adaptToMealEntity,
+  buildMealEntitiesFromRuntime,
+  favoriteRecordToMealEntity,
+} from '../utils/mealEntity'
 
 const StoreContext = createContext<StoreState | null>(null)
 
@@ -69,9 +74,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Runtime data populated by a successful Gemini generation.
   // Empty for sample/local-dev-fallback plans, which fall back to static MEALS / RECIPE.
-  const [runtimeMeals,   setRuntimeMeals]   = useState<Record<string, Meal>>({})
-  const [runtimeRecipes, setRuntimeRecipes] = useState<Record<string, Recipe>>({})
-  const [runtimeGrocery, setRuntimeGrocery] = useState<Array<{ section: string; name: string; qty: string }>>([])
+  const [runtimeMeals,        setRuntimeMeals]        = useState<Record<string, Meal>>({})
+  const [runtimeRecipes,      setRuntimeRecipes]      = useState<Record<string, Recipe>>({})
+  const [runtimeGrocery,      setRuntimeGrocery]      = useState<Array<{ section: string; name: string; qty: string }>>([])
+  const [runtimeMealEntities, setRuntimeMealEntities] = useState<Record<string, MealEntity>>({})
 
   const [groceryTags, setGroceryTags] = useState<GroceryTagMap>({
     'Paneer':                    'Indian Grocery',
@@ -193,6 +199,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             setRuntimeMeals(remoteExtended.runtimeMeals)
             setRuntimeRecipes(remoteExtended.runtimeRecipes)
             setRuntimeGrocery(remoteExtended.runtimeGrocery)
+            setRuntimeMealEntities(buildMealEntitiesFromRuntime(
+              remoteExtended.runtimeMeals,
+              remoteExtended.runtimeRecipes,
+              remoteExtended.source === 'gemini' ? 'gemini' :
+              remoteExtended.source === 'sample' ? 'sample' : 'unknown',
+            ))
             setPlanSource(remoteExtended.source)
             setOverrides(remoteExtended.overrides as OverrideMap)
             setPlanSaved(true)
@@ -323,6 +335,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const getRecipe = (id: string): Recipe | undefined =>
     runtimeRecipes[id] ?? favoriteRecords.get(id)?.recipeSnapshot
 
+  // Unified MealEntity lookup: derived runtime entities first, then static MEALS adapted
+  // as source 'sample', then a favorited record's snapshots.
+  const getMealEntity = (id: string): MealEntity | undefined => {
+    if (runtimeMealEntities[id]) return runtimeMealEntities[id]
+    if (MEALS[id]) return adaptToMealEntity(MEALS[id], undefined, { source: 'sample' })
+    const record = favoriteRecords.get(id)
+    if (record) return favoriteRecordToMealEntity(record) ?? undefined
+    return undefined
+  }
+
   // Saves the current generated plan to Firestore. Called from Dashboard.
   // No-op when Firebase is not configured or no plan exists.
   const savePlanToCloud = (): void => {
@@ -368,6 +390,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             setRuntimeMeals(response.meals)
             setRuntimeRecipes(response.recipes)
             setRuntimeGrocery(response.groceryItems)
+            setRuntimeMealEntities(buildMealEntitiesFromRuntime(response.meals, response.recipes, 'gemini'))
             setPlanSource('gemini')
             setPlanSaved(false)
             return
@@ -402,6 +425,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setRuntimeMeals({})
     setRuntimeRecipes({})
     setRuntimeGrocery([])
+    setRuntimeMealEntities({})
     setOverrides({})
     setPlanSaved(false)
     setPlanDirty(false)
@@ -475,8 +499,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     recipeTarget, setRecipeTarget,
     generatedPlan, setGeneratedPlan,
     planSource, generationLoading, generationError,
-    runtimeMeals, runtimeRecipes, runtimeGrocery,
-    getMeal, getRecipe, generatePlanAsync, viewSamplePlan, savePlanToCloud,
+    runtimeMeals, runtimeRecipes, runtimeGrocery, runtimeMealEntities,
+    getMeal, getRecipe, getMealEntity, generatePlanAsync, viewSamplePlan, savePlanToCloud,
   }
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>

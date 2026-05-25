@@ -185,3 +185,21 @@ export function favoriteRecordToMealEntity(record: FavoriteRecord): MealEntity |
   if (!record.snapshot) return null
   return adaptToMealEntity(record.snapshot, record.recipeSnapshot, { source: record.source })
 }
+
+/**
+ * Builds a Record<id, MealEntity> from parallel runtime meal and recipe maps.
+ * Every meal in `meals` gets an entity; a missing recipe entry produces an
+ * entity with empty ingredients and steps (valid, not an error).
+ */
+export function buildMealEntitiesFromRuntime(
+  meals: Record<string, Meal>,
+  recipes: Record<string, Recipe>,
+  source: MealSource,
+): Record<string, MealEntity> {
+  return Object.fromEntries(
+    Object.entries(meals).map(([id, meal]) => [
+      id,
+      adaptToMealEntity(meal, recipes[id], { source }),
+    ]),
+  )
+}

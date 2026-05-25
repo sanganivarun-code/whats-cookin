@@ -1,4 +1,4 @@
-import type { MealSlot, MealPlan, Meal, Recipe } from './meal'
+import type { MealSlot, MealPlan, Meal, Recipe, MealEntity } from './meal'
 import type { FavoriteRecord } from '../lib/firestoreSync'
 import type {
   GroceryTagMap,
@@ -137,15 +137,22 @@ export interface StoreState {
 
   // Runtime meal/recipe/grocery data populated by a successful Gemini generation.
   // Empty for sample/local-dev-fallback plans, which use the static MEALS / RECIPE data.
-  runtimeMeals:   Record<string, Meal>
-  runtimeRecipes: Record<string, Recipe>
-  runtimeGrocery: Array<{ section: string; name: string; qty: string }>
+  runtimeMeals:        Record<string, Meal>
+  runtimeRecipes:      Record<string, Recipe>
+  runtimeGrocery:      Array<{ section: string; name: string; qty: string }>
+  // Derived from runtimeMeals + runtimeRecipes via adaptToMealEntity. Read-side only —
+  // not written to Firestore. Populated whenever runtimeMeals/runtimeRecipes are set.
+  runtimeMealEntities: Record<string, MealEntity>
 
   // Unified meal lookup: runtimeMeals → static MEALS → favorited meal snapshot → undefined.
   getMeal: (id: string) => Meal | undefined
 
   // Unified recipe lookup: runtimeRecipes first, then favorited recipeSnapshot, then undefined.
   getRecipe: (id: string) => Recipe | undefined
+
+  // Unified MealEntity lookup: runtimeMealEntities → static MEALS adapted as sample →
+  // favoriteRecordToMealEntity → undefined.
+  getMealEntity: (id: string) => MealEntity | undefined
 
   // Starts async Gemini plan generation. Callers (Onboarding) must gate on auth
   // before calling. Fire-and-forget — drives generationLoading / generationError /

@@ -3,6 +3,7 @@ import {
   legacyIngredientToStructuredIngredient,
   adaptToMealEntity,
   favoriteRecordToMealEntity,
+  buildMealEntitiesFromRuntime,
 } from '../../utils/mealEntity'
 import type { Meal, Recipe } from '../../types/meal'
 import type { FavoriteRecord } from '../../lib/firestoreSync'
@@ -137,6 +138,44 @@ describe('adaptToMealEntity', () => {
     expect(entity.servings).toBe(1)
     expect(entity.difficulty).toBe('Medium')
     expect(entity.source).toBe('unknown')
+  })
+})
+
+// ─── buildMealEntitiesFromRuntime ─────────────────────────────────────────────
+
+describe('buildMealEntitiesFromRuntime', () => {
+  const meals: Record<string, Meal> = {
+    meal_1: baseMeal,
+    meal_2: { ...baseMeal, id: 'meal_2', name: 'Chana Masala' },
+  }
+  const recipes: Record<string, Recipe> = {
+    meal_1: baseRecipe,
+  }
+
+  it('produces one entity per meal in the input map', () => {
+    const entities = buildMealEntitiesFromRuntime(meals, recipes, 'gemini')
+    expect(Object.keys(entities)).toHaveLength(2)
+    expect(entities['meal_1']).toBeDefined()
+    expect(entities['meal_2']).toBeDefined()
+  })
+
+  it('links the matching recipe by ID — entity has populated ingredients', () => {
+    const entities = buildMealEntitiesFromRuntime(meals, recipes, 'gemini')
+    expect(entities['meal_1'].ingredients).toHaveLength(3)
+    expect(entities['meal_1'].ingredients[0].name).toBe('Red Lentils')
+  })
+
+  it('assigns the passed source to every entity', () => {
+    const entities = buildMealEntitiesFromRuntime(meals, recipes, 'gemini')
+    expect(entities['meal_1'].source).toBe('gemini')
+    expect(entities['meal_2'].source).toBe('gemini')
+  })
+
+  it('meal with no matching recipe produces a valid entity with empty ingredients and steps', () => {
+    const entities = buildMealEntitiesFromRuntime(meals, {}, 'gemini')
+    expect(entities['meal_1'].ingredients).toHaveLength(0)
+    expect(entities['meal_1'].steps).toHaveLength(0)
+    expect(entities['meal_1'].name).toBe('Dal Tadka')
   })
 })
 
