@@ -10,7 +10,7 @@ interface NutritionProps {
 }
 
 export function Nutrition({ go }: NutritionProps) {
-  const { profile, generatedPlan, getMeal } = useStore()
+  const { profile, generatedPlan, getMealEntity } = useStore()
   const goalKcal    = profile?.goalKcal    ?? 1900
   const goalProtein = profile?.goalProtein ?? 110
 
@@ -19,9 +19,9 @@ export function Nutrition({ go }: NutritionProps) {
     const keys = ['breakfast', 'lunch', 'snack', 'dinner'] as const
     return keys.reduce(
       (acc, k) => {
-        const m = getMeal(day[k])
-        if (!m) return acc
-        return { kcal: acc.kcal + m.kcal, p: acc.p + m.p, c: acc.c + m.c, fat: acc.fat + m.fat, sugar: acc.sugar + m.sugar, fiber: acc.fiber + m.fiber }
+        const e = getMealEntity(day[k])
+        if (!e) return acc
+        return { kcal: acc.kcal + e.nutrition.kcal, p: acc.p + e.nutrition.p, c: acc.c + e.nutrition.c, fat: acc.fat + e.nutrition.fat, sugar: acc.sugar + e.nutrition.sugar, fiber: acc.fiber + e.nutrition.fiber }
       },
       { kcal: 0, p: 0, c: 0, fat: 0, sugar: 0, fiber: 0 },
     )
