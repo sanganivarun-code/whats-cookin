@@ -12,7 +12,7 @@ interface DashboardProps {
 // ─── Calendar view ────────────────────────────────────────────────────────────
 
 function CalendarView({ go }: { go: (r: AppRoute) => void }) {
-  const { favorites, toggleFavorite, getOverride, setEditTarget, setRecipeTarget, generatedPlan, getMeal } = useStore()
+  const { favorites, toggleFavorite, getOverride, setEditTarget, setRecipeTarget, generatedPlan, getMealEntity } = useStore()
   const activePlan = generatedPlan ?? PLAN
 
   return (
@@ -36,15 +36,15 @@ function CalendarView({ go }: { go: (r: AppRoute) => void }) {
             {planDay.leftover && (
               <button className="meal-card leftover" onClick={() => { setRecipeTarget(planDay.leftover!); go('recipe') }}>
                 <span className="meal-eyebrow"><Icon.Leaf size={10} /> Leftover lunch</span>
-                <span className="meal-name">{getMeal(planDay.leftover)?.name}</span>
-                <span className="meal-kcal">{getMeal(planDay.leftover)?.kcal} kcal</span>
+                <span className="meal-name">{getMealEntity(planDay.leftover)?.name}</span>
+                <span className="meal-kcal">{getMealEntity(planDay.leftover)?.nutrition.kcal} kcal</span>
               </button>
             )}
 
             {MEAL_SLOT_LIST.map((slot) => {
               if (slot.key === 'lunch' && planDay.leftover) return null
               const override = getOverride(i, slot.key)
-              const meal = getMeal(planDay[slot.key])
+              const meal = getMealEntity(planDay[slot.key])
 
               if (override && override.kind === 'removed') {
                 return (
@@ -73,8 +73,8 @@ function CalendarView({ go }: { go: (r: AppRoute) => void }) {
               }
 
               if (override && (override.kind === 'self-cook' || override.kind === 'custom')) {
-                const m = override.kind === 'custom' && override.mealId ? getMeal(override.mealId) ?? null : null
-                if (m) { dayKcal += m.kcal; dayP += m.p }
+                const m = override.kind === 'custom' && override.mealId ? getMealEntity(override.mealId) ?? null : null
+                if (m) { dayKcal += m.nutrition.kcal; dayP += m.nutrition.p }
                 return (
                   <div key={slot.key} className="meal-card self-cook" style={{ position: 'relative' }}>
                     <button className="meal-menu-btn" style={{ position: 'absolute', top: 6, right: 6 }}
@@ -83,14 +83,14 @@ function CalendarView({ go }: { go: (r: AppRoute) => void }) {
                     </button>
                     <span className="meal-eyebrow"><Icon.Chef size={10} /> {slot.label}</span>
                     <span className="meal-name">{override.name}</span>
-                    <span className="meal-kcal muted">{m ? `${m.kcal} kcal · ${m.p}g P` : 'your recipe'}</span>
+                    <span className="meal-kcal muted">{m ? `${m.nutrition.kcal} kcal · ${m.nutrition.p}g P` : 'your recipe'}</span>
                   </div>
                 )
               }
 
               if (!meal) return null
-              dayKcal += meal.kcal
-              dayP += meal.p
+              dayKcal += meal.nutrition.kcal
+              dayP += meal.nutrition.p
               const isFav = favorites.has(meal.id)
 
               return (
@@ -110,7 +110,7 @@ function CalendarView({ go }: { go: (r: AppRoute) => void }) {
                   <button onClick={() => { setRecipeTarget(meal.id); go('recipe') }} style={{ background: 'transparent', border: 0, padding: 0, textAlign: 'left', display: 'flex', flexDirection: 'column', gap: 6, color: 'inherit', fontFamily: 'inherit', cursor: 'pointer', width: '100%' }}>
                     <span className="meal-eyebrow">{slot.label}</span>
                     <span className="meal-name">{meal.name}</span>
-                    <span className="meal-kcal">{meal.kcal} kcal · {meal.p}g P</span>
+                    <span className="meal-kcal">{meal.nutrition.kcal} kcal · {meal.nutrition.p}g P</span>
                   </button>
                 </div>
               )
@@ -130,16 +130,16 @@ function CalendarView({ go }: { go: (r: AppRoute) => void }) {
 // ─── Dashboard ────────────────────────────────────────────────────────────────
 
 export function Dashboard({ go }: DashboardProps) {
-  const { signedIn, setAuthOpen, planSaved, planDirty, saveError, favorites, profile, generatedPlan, getMeal, savePlanToCloud, planSource } = useStore()
+  const { signedIn, setAuthOpen, planSaved, planDirty, saveError, favorites, profile, generatedPlan, getMealEntity, savePlanToCloud, planSource } = useStore()
   const activePlan = generatedPlan ?? PLAN
 
   const avgKcal = Math.round(
     activePlan.reduce((s, day) =>
-      s + MEAL_SLOT_LIST.reduce((acc, slot) => acc + (getMeal(day[slot.key])?.kcal ?? 0), 0), 0) / 7
+      s + MEAL_SLOT_LIST.reduce((acc, slot) => acc + (getMealEntity(day[slot.key])?.nutrition.kcal ?? 0), 0), 0) / 7
   )
   const avgP = Math.round(
     activePlan.reduce((s, day) =>
-      s + MEAL_SLOT_LIST.reduce((acc, slot) => acc + (getMeal(day[slot.key])?.p ?? 0), 0), 0) / 7
+      s + MEAL_SLOT_LIST.reduce((acc, slot) => acc + (getMealEntity(day[slot.key])?.nutrition.p ?? 0), 0), 0) / 7
   )
 
   return (

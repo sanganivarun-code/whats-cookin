@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { AppRoute } from '../types/store'
-import type { Meal, MealSlot } from '../types/meal'
+import type { MealEntity, MealSlot } from '../types/meal'
 import { useStore } from '../context/StoreContext'
 import { Icon, FoodGlyph } from '../components/Icons'
 import { DAYS, PLAN, TODAY_INDEX } from '../data/meals'
@@ -13,7 +13,7 @@ interface TodayProps {
 interface TodayEntry {
   key: MealSlot
   label: string
-  meal: Meal | null
+  meal: MealEntity | null
   leftover?: boolean
   eatingOut?: boolean
   selfCook?: boolean
@@ -21,7 +21,7 @@ interface TodayEntry {
 }
 
 export function Today({ go }: TodayProps) {
-  const { favorites, toggleFavorite, getOverride, setEditTarget, setRecipeTarget, profile, user, generatedPlan, getMeal } = useStore()
+  const { favorites, toggleFavorite, getOverride, setEditTarget, setRecipeTarget, profile, user, generatedPlan, getMealEntity } = useStore()
   const [cooked, setCooked] = useState<Record<string, boolean>>({})
 
   const dayIndex = TODAY_INDEX
@@ -34,7 +34,7 @@ export function Today({ go }: TodayProps) {
 
   const meals: TodayEntry[] = MEAL_SLOT_LIST.flatMap((slot): TodayEntry[] => {
     if (slot.key === 'lunch' && planDay.leftover) {
-      const m = getMeal(planDay.leftover) ?? null
+      const m = getMealEntity(planDay.leftover) ?? null
       return [{ key: slot.key, label: slot.label, meal: m, leftover: true }]
     }
     const override = getOverride(dayIndex, slot.key)
@@ -43,14 +43,14 @@ export function Today({ go }: TodayProps) {
       return [{ key: slot.key, label: slot.label, meal: null, eatingOut: true }]
     }
     if (override && (override.kind === 'self-cook' || override.kind === 'custom')) {
-      const m = override.kind === 'custom' && override.mealId ? (getMeal(override.mealId) ?? null) : null
+      const m = override.kind === 'custom' && override.mealId ? (getMealEntity(override.mealId) ?? null) : null
       return [{ key: slot.key, label: slot.label, meal: m, selfCook: true, name: override.name }]
     }
-    return [{ key: slot.key, label: slot.label, meal: getMeal(planDay[slot.key]) ?? null }]
+    return [{ key: slot.key, label: slot.label, meal: getMealEntity(planDay[slot.key]) ?? null }]
   })
 
-  const dayKcal = meals.reduce((s, m) => s + (m.meal?.kcal ?? 0), 0)
-  const dayP    = meals.reduce((s, m) => s + (m.meal?.p    ?? 0), 0)
+  const dayKcal = meals.reduce((s, m) => s + (m.meal?.nutrition.kcal ?? 0), 0)
+  const dayP    = meals.reduce((s, m) => s + (m.meal?.nutrition.p    ?? 0), 0)
   const totalCookTime = meals.reduce((s, m) => s + (m.leftover || m.eatingOut ? 0 : m.meal?.time ?? 0), 0)
   const cookedCount = Object.values(cooked).filter(Boolean).length
 
@@ -148,8 +148,8 @@ export function Today({ go }: TodayProps) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <h2 className="h-2" style={{ fontSize: 26, lineHeight: 1.15 }}>{meal.name}</h2>
                   <div className="row gap-3 mt-2" style={{ flexWrap: 'wrap' }}>
-                    <span className="today-stat"><Icon.Flame size={13} /> {meal.kcal} kcal</span>
-                    <span className="today-stat"><span className="dot" style={{ background: 'var(--paprika)' }} /> {meal.p}g protein</span>
+                    <span className="today-stat"><Icon.Flame size={13} /> {meal.nutrition.kcal} kcal</span>
+                    <span className="today-stat"><span className="dot" style={{ background: 'var(--paprika)' }} /> {meal.nutrition.p}g protein</span>
                     <span className="today-stat"><Icon.Clock size={13} /> {m.leftover ? 'Reheat' : `${meal.time} min`}</span>
                   </div>
                 </div>
