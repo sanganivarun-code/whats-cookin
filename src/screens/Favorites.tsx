@@ -1,5 +1,5 @@
 import type { AppRoute } from '../types/store'
-import type { Meal } from '../types/meal'
+import type { MealEntity } from '../types/meal'
 import { useStore } from '../context/StoreContext'
 import { Icon, FoodGlyph } from '../components/Icons'
 import { groupByCuisine, sortCuisineGroups } from '../utils/favorites'
@@ -8,30 +8,16 @@ interface FavoritesProps {
   go: (r: AppRoute) => void
 }
 
-// Cuisine strings used in MEALS and the Gemini prompt (rule 16).
-const KNOWN_CUISINES = [
-  'North Indian', 'South Indian', 'Indian',
-  'Mediterranean', 'Japanese', 'Mexican', 'Chinese', 'Italian', 'Thai', 'Korean',
-]
-
 export function Favorites({ go }: FavoritesProps) {
-  const { favorites, favoriteRecords, toggleFavorite, getMeal, runtimeRecipes, signedIn, setAuthOpen, setRecipeTarget } = useStore()
+  const { favorites, toggleFavorite, getMealEntity, signedIn, setAuthOpen, setRecipeTarget } = useStore()
 
-  // Resolve each favorited ID: prefer the stored snapshot for display data
-  // (it survives refresh without runtimeMeals). Patch cuisine in three stages:
-  // snapshot → getMeal → recipe tags (for old Gemini plans that predate cuisine schema).
-  const resolved: Meal[] = []
+  const resolved: MealEntity[] = []
   const tombstoneIds: string[] = []
 
   for (const id of favorites) {
-    const snapshot = favoriteRecords.get(id)?.snapshot
-    const liveMeal = getMeal(id)
-    const baseMeal = snapshot ?? liveMeal
-    if (!baseMeal) { tombstoneIds.push(id); continue }
-
-    const cuisineFromTags = runtimeRecipes[id]?.tags.find(t => KNOWN_CUISINES.includes(t))
-    const cuisine = baseMeal.cuisine ?? cuisineFromTags
-    resolved.push({ ...baseMeal, cuisine })
+    const entity = getMealEntity(id)
+    if (!entity) { tombstoneIds.push(id); continue }
+    resolved.push(entity)
   }
 
   const sortedGroups = sortCuisineGroups(groupByCuisine(resolved))
@@ -72,24 +58,24 @@ export function Favorites({ go }: FavoritesProps) {
         </div>
       ) : (
         <div>
-          {sortedGroups.map(([cuisine, meals]) => (
+          {sortedGroups.map(([cuisine, entities]) => (
             <div key={cuisine} className="mb-6">
               <div className="eyebrow mb-3">{cuisine}</div>
               <div className="fav-grid">
-                {meals.map(meal => (
-                  <div key={meal.id} className="meal-card" style={{ position: 'relative', cursor: 'pointer' }}
-                    onClick={() => { setRecipeTarget(meal.id); go('recipe') }}>
+                {entities.map(entity => (
+                  <div key={entity.id} className="meal-card" style={{ position: 'relative', cursor: 'pointer' }}
+                    onClick={() => { setRecipeTarget(entity.id); go('recipe') }}>
                     <div className="meal-actions">
                       <button
                         className="heart-btn on"
-                        onClick={(e) => { e.stopPropagation(); toggleFavorite(meal.id) }}
+                        onClick={(e) => { e.stopPropagation(); toggleFavorite(entity.id) }}
                         title="Remove from favorites">
                         <Icon.Heart filled size={12} />
                       </button>
                     </div>
-                    <FoodGlyph kind={meal.glyph} tone={meal.tone} size="sm" />
-                    <span className="meal-name" style={{ marginTop: 8 }}>{meal.name}</span>
-                    <span className="meal-kcal">{meal.kcal} kcal · {meal.p}g P</span>
+                    <FoodGlyph kind={entity.glyph} tone={entity.tone} size="sm" />
+                    <span className="meal-name" style={{ marginTop: 8 }}>{entity.name}</span>
+                    <span className="meal-kcal">{entity.nutrition.kcal} kcal · {entity.nutrition.p}g P</span>
                   </div>
                 ))}
               </div>

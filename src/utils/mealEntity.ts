@@ -7,6 +7,14 @@ import type { FavoriteRecord } from '../lib/firestoreSync'
 
 // ─── Internal helpers ──────────────────────────────────────────────────────────
 
+// Cuisine strings recognised in the Gemini prompt and MEALS library.
+// Used to derive cuisine from recipe tags when the Meal object predates the
+// cuisine field (old Gemini plans written before the schema was extended).
+const KNOWN_CUISINES = new Set([
+  'North Indian', 'South Indian', 'Indian',
+  'Mediterranean', 'Japanese', 'Mexican', 'Chinese', 'Italian', 'Thai', 'Korean',
+])
+
 // Words that appear as trailing descriptors in a parsed unit string but carry
 // no unit meaning: "1 inch piece" → unit "inch", not "inch piece".
 const PREP_WORDS = new Set([
@@ -154,7 +162,7 @@ export function adaptToMealEntity(
   return {
     id:         meal.id,
     name:       meal.name,
-    cuisine:    meal.cuisine ?? 'Other',
+    cuisine:    meal.cuisine ?? recipe?.tags.find(t => KNOWN_CUISINES.has(t)) ?? 'Other',
     source:     options?.source ?? 'unknown',
     glyph:      meal.glyph,
     tone:       meal.tone,

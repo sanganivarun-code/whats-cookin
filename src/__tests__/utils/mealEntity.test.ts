@@ -140,6 +140,13 @@ describe('adaptToMealEntity', () => {
     expect(entity.difficulty).toBe('Medium')
     expect(entity.source).toBe('unknown')
   })
+
+  it('falls back to recipe tags for cuisine when meal has no cuisine field', () => {
+    const mealNoCuisine: Meal = { ...baseMeal, cuisine: undefined }
+    const recipeWithCuisineTag: Recipe = { ...baseRecipe, tags: ['vegan', 'North Indian'] }
+    const entity = adaptToMealEntity(mealNoCuisine, recipeWithCuisineTag)
+    expect(entity.cuisine).toBe('North Indian')
+  })
 })
 
 // ─── scaleStructuredAmt ───────────────────────────────────────────────────────

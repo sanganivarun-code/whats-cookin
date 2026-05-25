@@ -1,8 +1,6 @@
 // Pure helpers for favorites logic.
 // No Firebase or React dependencies — safe to unit-test directly.
 
-import type { Meal } from '../types/meal'
-
 export function mergeFavorites(
   local: Set<string>,
   remote: Set<string>,
@@ -12,20 +10,20 @@ export function mergeFavorites(
   return { merged, toSave }
 }
 
-// Groups an array of meals by cuisine. Meals with no cuisine field (or an empty
+// Groups an array of items by cuisine. Items with no cuisine field (or an empty
 // string) are placed under "Other".
-export function groupByCuisine(meals: Meal[]): Record<string, Meal[]> {
-  const result: Record<string, Meal[]> = {}
-  for (const meal of meals) {
-    const key = meal.cuisine?.trim() || 'Other'
+export function groupByCuisine<T extends { cuisine?: string }>(items: T[]): Record<string, T[]> {
+  const result: Record<string, T[]> = {}
+  for (const item of items) {
+    const key = item.cuisine?.trim() || 'Other'
     if (!result[key]) result[key] = []
-    result[key].push(meal)
+    result[key].push(item)
   }
   return result
 }
 
 // Sorts cuisine group entries alphabetically, keeping "Other" last.
-export function sortCuisineGroups(groups: Record<string, Meal[]>): [string, Meal[]][] {
+export function sortCuisineGroups<T>(groups: Record<string, T[]>): [string, T[]][] {
   return Object.entries(groups).sort(([a], [b]) => {
     if (a === 'Other') return 1
     if (b === 'Other') return -1
