@@ -1,38 +1,26 @@
 import { useState } from 'react'
-
-function formatIngredientName(name: string): string {
-  const parts = name.split(',').map((p) => p.trim())
-  const tc = (s: string) => s.replace(/\b\w/g, (c) => c.toUpperCase())
-  if (parts.length === 1) return tc(parts[0])
-  if (parts.length === 2) return `${tc(parts[0])} - ${tc(parts[1])}`
-  // "Tomatoes, Cherry, Halved" → "Cherry Tomatoes - Halved"
-  const [base, modifier, ...prepParts] = parts
-  const prep = prepParts.join(' ')
-  return prep
-    ? `${tc(modifier)} ${tc(base)} - ${tc(prep)}`
-    : `${tc(modifier)} ${tc(base)}`
-}
 import type { AppRoute } from '../types/store'
+import type { StructuredIngredient } from '../types/meal'
 import { useStore } from '../context/StoreContext'
 import { Icon } from '../components/Icons'
-import { scaleAmt } from '../utils/mealPlan'
+import { scaleStructuredAmt } from '../utils/mealEntity'
 
 interface RecipeProps {
   go: (r: AppRoute) => void
 }
 
 export function Recipe({ go }: RecipeProps) {
-  const { favorites, toggleFavorite, groceryEdits, recipeTarget, getMeal, getRecipe } = useStore()
-  const r = recipeTarget ? getRecipe(recipeTarget) : undefined
-  const [servings, setServings] = useState(r?.servings ?? 2)
+  const { favorites, toggleFavorite, groceryEdits, recipeTarget, getMealEntity } = useStore()
+  const entity = recipeTarget ? getMealEntity(recipeTarget) : undefined
+  const [servings, setServings] = useState(entity?.servings ?? 2)
 
   const subs = Object.entries(groceryEdits)
     .filter(([orig, e]) => e?.name && e.name !== orig)
     .map(([orig, e]) => ({ original: orig, replacement: e.name as string }))
 
-  const mealName = recipeTarget ? getMeal(recipeTarget)?.name : undefined
-
-  if (!r) {
+  // Show the unavailable state when: no entity found, or entity has no recipe
+  // detail (sample-plan meals, legacy favorites without a stored recipeSnapshot).
+  if (!entity || (entity.ingredients.length === 0 && entity.steps.length === 0)) {
     return (
       <div className="page">
         <button className="nav-link mb-4" onClick={() => go('dashboard')} style={{ paddingLeft: 0 }}>
@@ -40,7 +28,7 @@ export function Recipe({ go }: RecipeProps) {
         </button>
         <div className="page-header mb-6">
           <div style={{ maxWidth: 700 }}>
-            {mealName && <h1 className="h-1">{mealName}</h1>}
+            {entity?.name && <h1 className="h-1">{entity.name}</h1>}
             <p className="lead mt-2">Recipe details aren't available for this meal. This can happen with older favorites saved before recipes were stored, or with sample-plan meals.</p>
           </div>
           <div className="row gap-2">
@@ -51,14 +39,14 @@ export function Recipe({ go }: RecipeProps) {
     )
   }
 
-  const favId = recipeTarget ?? r.id
+  const favId = recipeTarget ?? entity.id
   const isFav = favorites.has(favId)
-  const ratio = servings / r.servings
+  const ratio = servings / entity.servings
 
   const ingredientSub: Record<number, { original: string; replacement: string }> = {}
   subs.forEach((s) => {
     const keywords = s.original.toLowerCase().split(/[\s,]+/).filter((w) => w.length > 3)
-    r.ingredients.forEach((ing, idx) => {
+    entity.ingredients.forEach((ing, idx) => {
       const lower = ing.name.toLowerCase()
       if (keywords.some((w) => lower.includes(w))) ingredientSub[idx] = s
     })
@@ -66,20 +54,20 @@ export function Recipe({ go }: RecipeProps) {
 
   const CATEGORY_ORDER = ['Produce', 'Dairy & Protein', 'Grains & Bread', 'Spices & Oils', 'Pantry', 'Other'] as const
 
-  const grouped = r.ingredients.reduce<Record<string, { idx: number; ing: typeof r.ingredients[number] }[]>>(
+  const grouped = entity.ingredients.reduce<Record<string, { idx: number; ing: StructuredIngredient }[]>>(
     (acc, ing, idx) => {
-      const cat = ing.category ?? 'Other'
+      const cat = ing.category
       if (!acc[cat]) acc[cat] = []
       acc[cat].push({ idx, ing })
       return acc
     },
-    {}
+    {},
   )
 
-  const n = r.nutrition
+  const n = entity.nutrition
   const denom = n.p * 4 + n.c * 4 + n.fat * 9
-  const pPct  = denom > 0 ? Math.round((n.p   * 4 / denom) * 100) : 0
-  const cPct  = denom > 0 ? Math.round((n.c   * 4 / denom) * 100) : 0
+  const pPct   = denom > 0 ? Math.round((n.p   * 4 / denom) * 100) : 0
+  const cPct   = denom > 0 ? Math.round((n.c   * 4 / denom) * 100) : 0
   const fatPct = denom > 0 ? Math.round((n.fat * 9 / denom) * 100) : 0
 
   return (
@@ -90,13 +78,10 @@ export function Recipe({ go }: RecipeProps) {
 
       <div className="page-header mb-6">
         <div style={{ maxWidth: 700 }}>
-          {recipeTarget && getMeal(recipeTarget) && getMeal(recipeTarget)!.id !== r.id && (
-            <div className="eyebrow mb-2">{getMeal(recipeTarget)!.name}</div>
-          )}
-          <h1 className="h-1">{r.name}</h1>
-          <p className="lead mt-2">{r.subtitle}</p>
+          <h1 className="h-1">{entity.name}</h1>
+          <p className="lead mt-2">{entity.subtitle}</p>
           <div className="row gap-2 mt-4" style={{ flexWrap: 'wrap' }}>
-            {r.tags.map((t) => <span key={t} className="chip">{t}</span>)}
+            {entity.tags.map((t) => <span key={t} className="chip">{t}</span>)}
           </div>
         </div>
         <div className="row gap-2">
@@ -116,11 +101,11 @@ export function Recipe({ go }: RecipeProps) {
           <div className="row gap-6 mb-6">
             <div>
               <div className="eyebrow mb-2">Cook time</div>
-              <div className="serif" style={{ fontSize: 22, fontWeight: 500 }}>{r.time} min</div>
+              <div className="serif" style={{ fontSize: 22, fontWeight: 500 }}>{entity.time} min</div>
             </div>
             <div>
               <div className="eyebrow mb-2">Difficulty</div>
-              <div className="serif" style={{ fontSize: 22, fontWeight: 500 }}>{r.difficulty}</div>
+              <div className="serif" style={{ fontSize: 22, fontWeight: 500 }}>{entity.difficulty}</div>
             </div>
             <div>
               <div className="eyebrow mb-2">Servings</div>
@@ -133,14 +118,14 @@ export function Recipe({ go }: RecipeProps) {
             <div>
               <div className="eyebrow mb-2">Per serving</div>
               <div className="serif" style={{ fontSize: 22, fontWeight: 500 }}>
-                {r.nutrition.kcal} <span className="mono muted" style={{ fontSize: 13 }}>kcal</span>
+                {entity.nutrition.kcal} <span className="mono muted" style={{ fontSize: 13 }}>kcal</span>
               </div>
             </div>
           </div>
 
           <h2 className="h-2 mb-4">Method</h2>
           <div>
-            {r.steps.map((step, i) => (
+            {entity.steps.map((step, i) => (
               <div className="step" key={i}>
                 <div className="step-num">{String(i + 1).padStart(2, '0')}</div>
                 <div className="step-text">{step}</div>
@@ -228,10 +213,10 @@ export function Recipe({ go }: RecipeProps) {
                     return (
                       <div className="ingredient-row" key={idx}>
                         <span>
-                          {formatIngredientName(ing.name)}
-                          {sub && <span className="renamed-note">({formatIngredientName(sub.replacement)})</span>}
+                          {ing.name}{ing.prep ? ` — ${ing.prep}` : ''}
+                          {sub && <span className="renamed-note">({sub.replacement})</span>}
                         </span>
-                        <span className="amt">{scaleAmt(ing.amt, ratio)}</span>
+                        <span className="amt">{scaleStructuredAmt(ing, ratio)}</span>
                       </div>
                     )
                   })}

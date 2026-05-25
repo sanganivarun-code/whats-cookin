@@ -4,6 +4,7 @@ import {
   adaptToMealEntity,
   favoriteRecordToMealEntity,
   buildMealEntitiesFromRuntime,
+  scaleStructuredAmt,
 } from '../../utils/mealEntity'
 import type { Meal, Recipe } from '../../types/meal'
 import type { FavoriteRecord } from '../../lib/firestoreSync'
@@ -138,6 +139,30 @@ describe('adaptToMealEntity', () => {
     expect(entity.servings).toBe(1)
     expect(entity.difficulty).toBe('Medium')
     expect(entity.source).toBe('unknown')
+  })
+})
+
+// ─── scaleStructuredAmt ───────────────────────────────────────────────────────
+
+describe('scaleStructuredAmt', () => {
+  it('scales a numeric quantity', () => {
+    const ing = legacyIngredientToStructuredIngredient({ name: 'Red Lentils', amt: '1 cup' })
+    expect(scaleStructuredAmt(ing, 2)).toBe('2 cup')
+  })
+
+  it('returns displayQty unchanged when quantity is null', () => {
+    const ing = legacyIngredientToStructuredIngredient({ name: 'Salt', amt: 'to taste' })
+    expect(scaleStructuredAmt(ing, 3)).toBe('to taste')
+  })
+
+  it('handles empty unit — no trailing space', () => {
+    const ing = legacyIngredientToStructuredIngredient({ name: 'Eggs', amt: '2' })
+    expect(scaleStructuredAmt(ing, 3)).toBe('6')
+  })
+
+  it('uses formatNum cleanly — no trailing zeros', () => {
+    const ing = legacyIngredientToStructuredIngredient({ name: 'Butter', amt: '½ cup' })
+    expect(scaleStructuredAmt(ing, 3)).toBe('1.5 cup')
   })
 })
 

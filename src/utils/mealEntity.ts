@@ -187,6 +187,16 @@ export function favoriteRecordToMealEntity(record: FavoriteRecord): MealEntity |
 }
 
 /**
+ * Scales a StructuredIngredient's quantity by `ratio` for the servings stepper.
+ * Returns `displayQty` unchanged when ratio is 1 or quantity is null (non-numeric).
+ */
+export function scaleStructuredAmt(ingredient: StructuredIngredient, ratio: number): string {
+  if (ratio === 1 || ingredient.quantity === null) return ingredient.displayQty
+  const scaled = `${formatNum(ingredient.quantity * ratio)}${ingredient.unit ? ' ' + ingredient.unit : ''}`
+  return scaled.trim()
+}
+
+/**
  * Builds a Record<id, MealEntity> from parallel runtime meal and recipe maps.
  * Every meal in `meals` gets an entity; a missing recipe entry produces an
  * entity with empty ingredients and steps (valid, not an error).
