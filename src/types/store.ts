@@ -147,9 +147,6 @@ export interface StoreState {
   // Unified meal lookup: runtimeMeals → static MEALS → favorited meal snapshot → undefined.
   getMeal: (id: string) => Meal | undefined
 
-  // Unified recipe lookup: runtimeRecipes first, then favorited recipeSnapshot, then undefined.
-  getRecipe: (id: string) => Recipe | undefined
-
   // Unified MealEntity lookup: runtimeMealEntities → static MEALS adapted as sample →
   // favoriteRecordToMealEntity → undefined.
   getMealEntity: (id: string) => MealEntity | undefined

@@ -331,10 +331,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const getMeal = (id: string): Meal | undefined =>
     runtimeMeals[id] ?? MEALS[id] ?? favoriteRecords.get(id)?.snapshot
 
-  // Unified recipe lookup: runtime recipes first, then a saved favorite recipeSnapshot.
-  const getRecipe = (id: string): Recipe | undefined =>
-    runtimeRecipes[id] ?? favoriteRecords.get(id)?.recipeSnapshot
-
   // Unified MealEntity lookup: derived runtime entities first, then static MEALS adapted
   // as source 'sample', then a favorited record's snapshots.
   const getMealEntity = useCallback((id: string): MealEntity | undefined => {
@@ -500,7 +496,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     generatedPlan, setGeneratedPlan,
     planSource, generationLoading, generationError,
     runtimeMeals, runtimeRecipes, runtimeGrocery, runtimeMealEntities,
-    getMeal, getRecipe, getMealEntity, generatePlanAsync, viewSamplePlan, savePlanToCloud,
+    getMeal, getMealEntity, generatePlanAsync, viewSamplePlan, savePlanToCloud,
   }
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
